@@ -1,0 +1,36 @@
+name: Build
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  test:
+    name: Maven Tests
+    runs-on: ubuntu-latest
+
+    env:
+      OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+      TOKEN_SECRET_KEY: ${{ secrets.TOKEN_SECRET_KEY }}
+      DAB_MCP_BASE_URL: ${{ secrets.DAB_MCP_BASE_URL }}
+      OPENROUTER_HTTP_REFERER: ${{ secrets.OPENROUTER_HTTP_REFERER }}
+      ECOM_MSSQL_CONNECTION_STRING: ${{ secrets.ECOM_MSSQL_CONNECTION_STRING }}
+      ECOM_JDBC_URL: ${{ secrets.ECOM_JDBC_URL }}
+      ECOM_JDBC_USERNAME: ${{ secrets.ECOM_JDBC_USERNAME }}
+      ECOM_JDBC_PASSWORD: ${{ secrets.ECOM_JDBC_PASSWORD }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: maven
+
+      - name: Run tests
+        run: mvn clean test
