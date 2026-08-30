@@ -1,0 +1,99 @@
+spring:
+  config:
+    import: optional:file:.env[.properties]
+  application:
+    name: sql-mcp-chat-openrouter
+  thymeleaf:
+    check-template-location: false
+  ai:
+    model:
+      chat: openai
+      embedding: none
+    openai:
+      base-url: https://openrouter.ai/api/v1
+      api-key: ${OPENROUTER_API_KEY:}
+      chat:
+        model: ${APP_MODELS_PRIMARY:minimax/minimax-m3:free}
+    mcp:
+      client:
+        enabled: true
+        name: sql-mcp-chat-openrouter
+        version: 0.0.1
+        initialized: true
+        request-timeout: 30s
+        type: SYNC
+        # Raw callbacks must NOT become model-level defaults: the SensitiveDataGuard-wrapped
+        # copies are supplied per request instead. See McpToolCatalog.
+        toolcallback:
+          enabled: false
+        streamable-http:
+          connections:
+            dab:
+              url: ${DAB_MCP_BASE_URL:http://localhost:5000}
+              endpoint: ${DAB_MCP_ENDPOINT:/mcp}
+    chat:
+      client:
+        observations:
+          log-prompt: false
+          log-completion: false
+      observations:
+        log-prompt: false
+        log-completion: false
+        include-error-logging: false
+    tools:
+      throw-exception-on-error: false
+      limits:
+        max-calls-per-tool-default: 8
+        max-calls-per-tool:
+          describe_entities: 3
+          read_records: 12
+          aggregate_records: 5
+        max-total-tool-calls: 20
+        on-limit-exceeded: RETURN_ERROR_RESPONSE
+
+app:
+  models:
+    primary: ${APP_MODELS_PRIMARY:minimax/minimax-m3:free}
+    fallback: ${APP_MODELS_FALLBACK:z-ai/glm-5.2:free}
+  execution:
+    fallback-enabled: ${APP_FALLBACK_ENABLED:true}
+    max-completion-tokens: ${APP_MAX_COMPLETION_TOKENS:1200}
+    temperature: ${APP_TEMPERATURE:0.1}
+    request-timeout: ${APP_REQUEST_TIMEOUT:120s}
+  memory:
+    max-messages: ${APP_MEMORY_MAX_MESSAGES:20}
+  openrouter:
+    referer: ${OPENROUTER_HTTP_REFERER:}
+    title: ${OPENROUTER_X_TITLE:sql-mcp-chat-openrouter}
+  security:
+    token-secret-key: ${TOKEN_SECRET_KEY:}
+  schema:
+    enabled: ${APP_SCHEMA_ENABLED:true}
+    catalog: ${APP_SCHEMA_CATALOG:dbo}
+    jdbc-url: ${ECOM_JDBC_URL:}
+    jdbc-username: ${ECOM_JDBC_USERNAME:}
+    jdbc-password: ${ECOM_JDBC_PASSWORD:}
+  # entity.field pairs tokenized before any tool result reaches the model.
+  # City/StateProvince/Country are deliberately NOT listed: they are coarse
+  # geography needed for regional aggregation, not direct identifiers.
+  sensitive-fields:
+    - entity: Customer
+      field: FullName
+      prefix: CU
+    - entity: Customer
+      field: Email
+      prefix: EM
+    - entity: Customer
+      field: Phone
+      prefix: PH
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+
+logging:
+  level:
+    root: INFO
+    com.example.sqlmcpchatopenrouter: ${APP_LOG_LEVEL:INFO}

@@ -1,0 +1,68 @@
+package com.example.sqlmcpchatopenrouter.security;
+
+import java.nio.charset.StandardCharsets;
+import java.util.HexFormat;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
+
+import org.springframework.util.StringUtils;
+
+final class SensitiveTokenStore {
+
+    private static final Pattern TOKEN_PATTERN = Pattern.compile("\\b([A-Z]{2,8})_([0-9a-f]{6,12})\\b");
+
+    private final Map<String, String> tokenToValue = new ConcurrentHashMap<>();
+
+    private final byte[] secretKey;
+
+    SensitiveTokenStore(byte[] secretKey) {
+        this.secretKey = secretKey;
+    }
+
+    int size() {
+        return this.tokenToValue.size();
+    }
+
+    String detokenize(String text) {
+        if (!StringUtils.hasText(text) || this.tokenToValue.isEmpty()) {
+            return text;
+        }
+        Matcher matcher = TOKEN_PATTERN.matcher(text);
+        StringBuilder restored = new StringBuilder();
+        while (matcher.find()) {
+            String replacement = this.tokenToValue.get(matcher.group());
+            matcher.appendReplacement(restored,
+                    Matcher.quoteReplacement(replacement != null ? replacement : matcher.group()));
+        }
+        matcher.appendTail(restored);
+        return restored.toString();
+    }
+
+    String tokenFor(String field, String prefix, String value) {
+        String digest = hmacHex(field.toLowerCase() + '|' + value);
+        for (int length = 6; length <= 12; length += 2) {
+            String token = prefix + '_' + digest.substring(0, length);
+            String existing = this.tokenToValue.putIfAbsent(token, value);
+            if (existing == null || existing.equals(value)) {
+                return token;
+            }
+        }
+        return prefix + '_' + digest.substring(0, 12);
+    }
+
+    private String hmacHex(String input) {
+        try {
+            Mac mac = Mac.getInstance("HmacSHA256");
+            mac.init(new SecretKeySpec(this.secretKey, "HmacSHA256"));
+            return HexFormat.of().formatHex(mac.doFinal(input.getBytes(StandardCharsets.UTF_8)));
+        }
+        catch (java.security.GeneralSecurityException ex) {
+            throw new IllegalStateException("Unable to derive sensitive-field token", ex);
+        }
+    }
+}
