@@ -14,6 +14,8 @@ Standalone Spring AI proof of concept for OpenRouter chat models and a local Mic
 ## Local Configuration
 
 Runtime values are loaded from the local `.env` file via Spring Boot config import.
+Copy `.env.example` to `.env` locally and fill in your own values. The real `.env`
+file is ignored by git and should not be committed.
 
 Required values:
 
@@ -29,6 +31,14 @@ ECOM_JDBC_PASSWORD=...
 ```
 
 Other settings such as the model names, MCP endpoint path, completion limit, temperature, and log level have defaults in `application.yml`; add them to `.env` only when overriding locally.
+
+## Secret Management
+
+- Keep local secrets only in `.env`.
+- Commit `.env.example` with placeholder values so other machines know which keys are required.
+- Use GitHub Actions repository secrets for CI/CD variables instead of committing keys.
+- Rotate `OPENROUTER_API_KEY` immediately if it is ever pasted into chat, logs, screenshots, or git history.
+- Generate `TOKEN_SECRET_KEY` as a long random value and keep it stable for one local environment.
 
 ## Current API
 
