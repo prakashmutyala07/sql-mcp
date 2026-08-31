@@ -46,6 +46,22 @@ class ApplicationResourceTests {
                 .contains("database filter or ask the user to provide raw PII");
     }
 
+    @Test
+    void systemPromptExcludesUnrequestedSensitiveFieldsFromCustomerLists() throws Exception {
+        String prompt = read("/prompts/sql-assistant-system.st");
+
+        assertThat(prompt)
+                .contains("FullName, Email, Phone, TransactionReference, and TrackingNumber")
+                .contains("must not be selected or")
+                .contains("displayed unless the user explicitly asks for them or they are strictly necessary")
+                .contains("include CustomerId plus only the requested")
+                .contains("pseudonymized sensitive fields must not be")
+                .contains("selected or displayed merely to support a possible follow-up")
+                .contains("User: \"List 10 customers with their city and loyalty tier.\"")
+                .contains("Correct columns: CustomerId, City, LoyaltyTier")
+                .contains("Incorrect columns: CustomerId, FullName, City, LoyaltyTier");
+    }
+
     private static String read(String path) throws Exception {
         try (var input = ApplicationResourceTests.class.getResourceAsStream(path)) {
             assertThat(input).as("classpath resource %s", path).isNotNull();
