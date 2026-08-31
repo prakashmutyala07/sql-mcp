@@ -38,6 +38,8 @@ Other settings such as the model names, MCP endpoint path, completion limit, tem
 - Generate `TOKEN_SECRET_KEY` as a long random value and keep it stable for one local environment.
 - Supply the SQL setup script's reader password with sqlcmd, for example
   `sqlcmd -v ECOM_DAB_READER_PASSWORD="..." -i dab/ecommerce/setup-ecommerce.sql`.
+- Configure `ECOM_MSSQL_CONNECTION_STRING` with `User Id=ecom_dab_reader`; do not run DAB with `sa`
+  or another write-capable database identity.
 
 ## Current API
 
