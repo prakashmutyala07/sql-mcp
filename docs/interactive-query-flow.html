@@ -211,16 +211,18 @@
 
     .flow {
       display: grid;
-      grid-template-columns: repeat(6, minmax(118px, 1fr));
+      grid-template-columns: repeat(6, minmax(145px, 1fr));
       gap: 12px;
     }
 
     .step {
       position: relative;
       min-height: 116px;
-      padding: 12px;
+      width: 100%;
+      padding: 14px;
       border: 2px solid var(--line-strong);
       border-radius: 8px;
+      appearance: none;
       color: var(--ink);
       text-align: left;
       cursor: pointer;
@@ -273,13 +275,16 @@
       margin-bottom: 6px;
       font-size: 14px;
       font-weight: 900;
-      line-height: 1.22;
+      line-height: 1.26;
+      overflow-wrap: anywhere;
+      word-break: break-word;
     }
 
     .step-desc {
       margin-bottom: 0;
       color: #41506a;
       font-size: 12px;
+      line-height: 1.35;
     }
 
     .step.ui { background: var(--blue-bg); border-color: var(--blue); }
