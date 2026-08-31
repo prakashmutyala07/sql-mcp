@@ -25,9 +25,6 @@ TOKEN_SECRET_KEY=...
 DAB_MCP_BASE_URL=http://localhost:5001
 OPENROUTER_HTTP_REFERER=http://localhost:8080
 ECOM_MSSQL_CONNECTION_STRING=...
-ECOM_JDBC_URL=...
-ECOM_JDBC_USERNAME=...
-ECOM_JDBC_PASSWORD=...
 ```
 
 Other settings such as the model names, MCP endpoint path, completion limit, temperature, and log level have defaults in `application.yml`; add them to `.env` only when overriding locally.
@@ -39,6 +36,8 @@ Other settings such as the model names, MCP endpoint path, completion limit, tem
 - Use GitHub Actions repository secrets for CI/CD variables instead of committing keys.
 - Rotate `OPENROUTER_API_KEY` immediately if it is ever pasted into chat, logs, screenshots, or git history.
 - Generate `TOKEN_SECRET_KEY` as a long random value and keep it stable for one local environment.
+- Supply the SQL setup script's reader password with sqlcmd, for example
+  `sqlcmd -v ECOM_DAB_READER_PASSWORD="..." -i dab/ecommerce/setup-ecommerce.sql`.
 
 ## Current API
 

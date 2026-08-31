@@ -28,7 +28,6 @@ import org.springframework.web.server.ResponseStatusException;
 
 import com.example.sqlmcpchatopenrouter.config.AppProperties;
 import com.example.sqlmcpchatopenrouter.mcp.McpToolCatalog;
-import com.example.sqlmcpchatopenrouter.schema.SchemaCatalog;
 import com.example.sqlmcpchatopenrouter.security.SensitiveDataGuard;
 
 @Service
@@ -47,25 +46,20 @@ public class ChatCoordinator implements ChatOperations {
 
     private final AppProperties properties;
 
-    private final SchemaCatalog schemaCatalog;
-
     private final SensitiveDataGuard sensitiveDataGuard;
 
     private final String systemPromptTemplate;
-
-    private volatile String resolvedSystemPrompt;
 
     private final BeanOutputConverter<ChatResponse.ModelAnswer> answerConverter =
             new BeanOutputConverter<>(ChatResponse.ModelAnswer.class);
 
     public ChatCoordinator(ChatClient.Builder chatClientBuilder, McpToolCatalog mcpToolCatalog, ChatMemory chatMemory,
-            AppProperties properties, SchemaCatalog schemaCatalog, SensitiveDataGuard sensitiveDataGuard,
+            AppProperties properties, SensitiveDataGuard sensitiveDataGuard,
             @Value("classpath:/prompts/sql-assistant-system.st") Resource systemPrompt) {
         this.chatClient = chatClientBuilder.build();
         this.mcpToolCatalog = mcpToolCatalog;
         this.chatMemory = chatMemory;
         this.properties = properties;
-        this.schemaCatalog = schemaCatalog;
         this.sensitiveDataGuard = sensitiveDataGuard;
         this.systemPromptTemplate = read(systemPrompt);
     }
@@ -80,7 +74,7 @@ public class ChatCoordinator implements ChatOperations {
                 : UUID.randomUUID().toString();
 
         progressSink.progress("schema", "Loading schema and relationships\u2026");
-        String system = systemPrompt();
+        String system = this.systemPromptTemplate;
 
         SensitiveDataGuard.Session guardSession =
                 this.sensitiveDataGuard.newSession(step -> progressSink.progress("tool", step));
@@ -136,22 +130,9 @@ public class ChatCoordinator implements ChatOperations {
         }
     }
 
-    /** Schema is read once and spliced into the prompt; empty when the database is unreachable. */
-    private String systemPrompt() {
-        String cached = this.resolvedSystemPrompt;
-        if (cached == null) {
-            synchronized (this) {
-                if (this.resolvedSystemPrompt == null) {
-                    String schema = this.schemaCatalog.render();
-                    this.resolvedSystemPrompt = this.systemPromptTemplate
-                            .replace("__CATALOG__", this.properties.schema().catalog())
-                            .replace("__SCHEMA__", schema.isBlank()
-                                    ? "(schema unavailable - call describe_entities first)" : schema);
-                }
-                cached = this.resolvedSystemPrompt;
-            }
-        }
-        return cached;
+    @Override
+    public List<McpToolCatalog.ToolSummary> tools() {
+        return this.mcpToolCatalog.tools();
     }
 
     private ChatResponse complete(String message, String conversationId, String model, String system,

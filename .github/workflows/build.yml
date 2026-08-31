@@ -17,9 +17,6 @@ jobs:
       DAB_MCP_BASE_URL: ${{ secrets.DAB_MCP_BASE_URL }}
       OPENROUTER_HTTP_REFERER: ${{ secrets.OPENROUTER_HTTP_REFERER }}
       ECOM_MSSQL_CONNECTION_STRING: ${{ secrets.ECOM_MSSQL_CONNECTION_STRING }}
-      ECOM_JDBC_URL: ${{ secrets.ECOM_JDBC_URL }}
-      ECOM_JDBC_USERNAME: ${{ secrets.ECOM_JDBC_USERNAME }}
-      ECOM_JDBC_PASSWORD: ${{ secrets.ECOM_JDBC_PASSWORD }}
 
     steps:
       - name: Checkout

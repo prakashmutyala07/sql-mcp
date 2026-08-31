@@ -21,7 +21,6 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import com.example.sqlmcpchatopenrouter.chat.ChatOperations;
 import com.example.sqlmcpchatopenrouter.chat.ChatResponse;
 import com.example.sqlmcpchatopenrouter.mcp.McpToolCatalog;
-import com.example.sqlmcpchatopenrouter.mcp.McpToolOperations;
 
 @RestController
 @RequestMapping("/api")
@@ -31,20 +30,16 @@ public class ChatController {
 
     private final ChatOperations chatCoordinator;
 
-    private final McpToolOperations mcpToolCatalog;
-
     private final AsyncTaskExecutor chatTaskExecutor;
 
-    public ChatController(ChatOperations chatCoordinator, McpToolOperations mcpToolCatalog,
-            AsyncTaskExecutor chatTaskExecutor) {
+    public ChatController(ChatOperations chatCoordinator, AsyncTaskExecutor chatTaskExecutor) {
         this.chatCoordinator = chatCoordinator;
-        this.mcpToolCatalog = mcpToolCatalog;
         this.chatTaskExecutor = chatTaskExecutor;
     }
 
     @GetMapping("/mcp/tools")
     public List<McpToolCatalog.ToolSummary> mcpTools() {
-        return this.mcpToolCatalog.tools();
+        return this.chatCoordinator.tools();
     }
 
     @PostMapping("/chat")

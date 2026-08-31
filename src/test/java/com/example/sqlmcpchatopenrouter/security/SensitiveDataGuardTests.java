@@ -35,7 +35,6 @@ class SensitiveDataGuardTests {
                 new AppProperties.Memory(20),
                 new AppProperties.Openrouter("", "title"),
                 new AppProperties.Security("unit-test-secret"),
-                new AppProperties.Schema(false, "dbo", "", "", ""),
                 List.of(new AppProperties.SensitiveField("Customer", "FullName", "CU"),
                         new AppProperties.SensitiveField("Customer", "Email", "EM")));
     }

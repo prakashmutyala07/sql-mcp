@@ -16,15 +16,12 @@ import com.example.sqlmcpchatopenrouter.chat.ChatResponse;
 import com.example.sqlmcpchatopenrouter.chat.ChatResponse.Status;
 import com.example.sqlmcpchatopenrouter.chat.ProgressSink;
 import com.example.sqlmcpchatopenrouter.mcp.McpToolCatalog;
-import com.example.sqlmcpchatopenrouter.mcp.McpToolOperations;
 
 class ChatControllerTests {
 
     private final FakeAiChatOperations aiChatService = new FakeAiChatOperations();
 
-    private final FakeMcpToolOperations mcpToolCatalog = new FakeMcpToolOperations();
-
-    private final ChatController controller = new ChatController(this.aiChatService, this.mcpToolCatalog,
+    private final ChatController controller = new ChatController(this.aiChatService,
             new SameThreadAsyncTaskExecutor());
 
     @Test
@@ -61,7 +58,7 @@ class ChatControllerTests {
     void mcpToolsDelegatesToCatalog() {
         List<McpToolCatalog.ToolSummary> tools = List.of(new McpToolCatalog.ToolSummary("describe_entities",
                 "Lists all entities", "{}"));
-        this.mcpToolCatalog.tools = tools;
+        this.aiChatService.tools = tools;
 
         assertThat(this.controller.mcpTools()).isEqualTo(tools);
     }
@@ -102,9 +99,6 @@ class ChatControllerTests {
         public void clearMemory(String conversationId) {
             this.clearedConversations.add(conversationId);
         }
-    }
-
-    static class FakeMcpToolOperations implements McpToolOperations {
 
         private List<McpToolCatalog.ToolSummary> tools = List.of();
 

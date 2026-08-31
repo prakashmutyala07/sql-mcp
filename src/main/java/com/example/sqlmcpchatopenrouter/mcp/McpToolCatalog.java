@@ -23,7 +23,7 @@ import com.example.sqlmcpchatopenrouter.security.SensitiveDataGuard;
  * request, and sensitive values would bypass tokenization entirely.
  */
 @Service
-public class McpToolCatalog implements McpToolOperations {
+public class McpToolCatalog {
 
     private final ObjectProvider<List<McpSyncClient>> mcpSyncClients;
 
@@ -31,10 +31,6 @@ public class McpToolCatalog implements McpToolOperations {
 
     public McpToolCatalog(ObjectProvider<List<McpSyncClient>> mcpSyncClients) {
         this.mcpSyncClients = mcpSyncClients;
-    }
-
-    public boolean isConfigured() {
-        return !clients().isEmpty();
     }
 
     /** Tool callbacks, or an empty array when no MCP client is configured. */

@@ -6,7 +6,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 
 @ConfigurationProperties("app")
 public record AppProperties(Models models, Execution execution, Memory memory, Openrouter openrouter,
-        Security security, Schema schema, List<SensitiveField> sensitiveFields) {
+        Security security, List<SensitiveField> sensitiveFields) {
 
     public AppProperties {
         sensitiveFields = sensitiveFields == null ? List.of() : List.copyOf(sensitiveFields);
@@ -30,9 +30,6 @@ public record AppProperties(Models models, Execution execution, Memory memory, O
     }
 
     public record Security(String tokenSecretKey) {
-    }
-
-    public record Schema(boolean enabled, String catalog, String jdbcUrl, String jdbcUsername, String jdbcPassword) {
     }
 
     /**

@@ -3,8 +3,6 @@ spring:
     import: optional:file:.env[.properties]
   application:
     name: sql-mcp-chat-openrouter
-  thymeleaf:
-    check-template-location: false
   ai:
     model:
       chat: openai
@@ -67,12 +65,6 @@ app:
     title: ${OPENROUTER_X_TITLE:sql-mcp-chat-openrouter}
   security:
     token-secret-key: ${TOKEN_SECRET_KEY:}
-  schema:
-    enabled: ${APP_SCHEMA_ENABLED:true}
-    catalog: ${APP_SCHEMA_CATALOG:dbo}
-    jdbc-url: ${ECOM_JDBC_URL:}
-    jdbc-username: ${ECOM_JDBC_USERNAME:}
-    jdbc-password: ${ECOM_JDBC_PASSWORD:}
   # entity.field pairs tokenized before any tool result reaches the model.
   # City/StateProvince/Country are deliberately NOT listed: they are coarse
   # geography needed for regional aggregation, not direct identifiers.
