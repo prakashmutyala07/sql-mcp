@@ -12,7 +12,7 @@ import org.springframework.ai.chat.client.ResponseEntity;
 import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
 import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.ai.chat.metadata.Usage;
-import org.springframework.ai.chat.model.ChatResponse;
+import org.springframework.ai.converter.BeanOutputConverter;
 import org.springframework.ai.openai.OpenAiChatModel;
 import org.springframework.ai.openai.OpenAiChatOptions;
 import org.springframework.ai.tool.ToolCallback;
@@ -30,9 +30,9 @@ import com.example.sqlmcpchatopenrouter.schema.SchemaCatalog;
 import com.example.sqlmcpchatopenrouter.security.SensitiveDataGuard;
 
 @Service
-public class AiChatService implements AiChatOperations {
+public class ChatCoordinator implements ChatOperations {
 
-    private static final Logger logger = LoggerFactory.getLogger(AiChatService.class);
+    private static final Logger logger = LoggerFactory.getLogger(ChatCoordinator.class);
 
     /** Brief pause before the single primary retry, so a 429 has a chance to clear. */
     private static final long RETRY_BACKOFF_MILLIS = 1_200L;
@@ -53,9 +53,10 @@ public class AiChatService implements AiChatOperations {
 
     private volatile String resolvedSystemPrompt;
 
-    private final StructuredAnswerConverter answerConverter = new StructuredAnswerConverter();
+    private final BeanOutputConverter<ChatResponse.ModelAnswer> answerConverter =
+            new BeanOutputConverter<>(ChatResponse.ModelAnswer.class);
 
-    public AiChatService(ChatClient.Builder chatClientBuilder, McpToolCatalog mcpToolCatalog, ChatMemory chatMemory,
+    public ChatCoordinator(ChatClient.Builder chatClientBuilder, McpToolCatalog mcpToolCatalog, ChatMemory chatMemory,
             AppProperties properties, SchemaCatalog schemaCatalog, SensitiveDataGuard sensitiveDataGuard,
             @Value("classpath:/prompts/sql-assistant-system.st") Resource systemPrompt) {
         this.chatClient = chatClientBuilder.build();
@@ -67,12 +68,12 @@ public class AiChatService implements AiChatOperations {
         this.systemPromptTemplate = read(systemPrompt);
     }
 
-    public ChatResult chat(String message, String conversationId) {
+    public ChatResponse chat(String message, String conversationId) {
         return chat(message, conversationId, ProgressSink.none());
     }
 
     @Override
-    public ChatResult chat(String message, String conversationId, ProgressSink progressSink) {
+    public ChatResponse chat(String message, String conversationId, ProgressSink progressSink) {
         String resolvedConversationId = StringUtils.hasText(conversationId) ? conversationId
                 : UUID.randomUUID().toString();
 
@@ -144,10 +145,11 @@ public class AiChatService implements AiChatOperations {
         return cached;
     }
 
-    private ChatResult complete(String message, String conversationId, String model, String system,
+    private ChatResponse complete(String message, String conversationId, String model, String system,
             ToolCallback[] tools, SensitiveDataGuard.Session guardSession, boolean fallbackUsed) {
         long startedAt = System.nanoTime();
-        ResponseEntity<ChatResponse, RawAssistantAnswer> response = this.chatClient.prompt()
+        ResponseEntity<org.springframework.ai.chat.model.ChatResponse, ChatResponse.ModelAnswer> response =
+                this.chatClient.prompt()
                 .system(system)
                 .user(message)
                 .advisors(MessageChatMemoryAdvisor.builder(this.chatMemory).build())
@@ -159,18 +161,24 @@ public class AiChatService implements AiChatOperations {
         logUsage(model, response.response(), System.nanoTime() - startedAt);
 
         // Tokens go out to the model; real values come back only here, at the edge.
-        AssistantAnswer raw = AssistantAnswer.from(response.entity());
-        // usedDatabaseTools is measured, not taken on trust: models have been observed
-        // claiming tool use while answering from memory.
-        AssistantAnswer restored = new AssistantAnswer(guardSession.detokenize(raw.answer()),
-                raw.columns(),
-                raw.rows().stream().map(row -> row.stream().map(guardSession::detokenize).toList()).toList(),
-                guardSession.toolInvocations() > 0, raw.partialResults(),
-                guardSession.detokenize(raw.dataNotes()), guardSession.detokenize(raw.followUpQuestion()));
-        return new ChatResult(conversationId, model, fallbackUsed, restored);
+        ChatResponse.ModelAnswer raw = response.entity();
+        ChatResponse.ModelAnswer restored = new ChatResponse.ModelAnswer(
+                raw == null ? ChatResponse.Status.ERROR : raw.status(),
+                raw == null ? "" : guardSession.detokenize(raw.answer()),
+                raw == null ? java.util.List.of() : raw.columns(),
+                raw == null ? java.util.List.of()
+                        : raw.rows().stream()
+                                .map(row -> row.stream().map(guardSession::detokenize).toList())
+                                .toList(),
+                raw != null && raw.partialResults(),
+                raw == null ? "" : guardSession.detokenize(raw.dataNotes()),
+                raw == null ? "" : guardSession.detokenize(raw.followUpQuestion()));
+        // Tool use is measured, not taken on trust from model output.
+        return ChatResponse.from(conversationId, model, fallbackUsed, restored, guardSession.toolInvocations() > 0);
     }
 
-    private static void logUsage(String model, ChatResponse response, long elapsedNanos) {
+    private static void logUsage(String model, org.springframework.ai.chat.model.ChatResponse response,
+            long elapsedNanos) {
         long latencyMs = elapsedNanos / 1_000_000L;
         Usage usage = (response != null && response.getMetadata() != null) ? response.getMetadata().getUsage() : null;
         if (usage == null) {

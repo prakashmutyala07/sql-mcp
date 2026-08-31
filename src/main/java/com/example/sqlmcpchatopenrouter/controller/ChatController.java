@@ -18,9 +18,8 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
-import com.example.sqlmcpchatopenrouter.chat.AiChatOperations;
-import com.example.sqlmcpchatopenrouter.chat.AssistantAnswer;
-import com.example.sqlmcpchatopenrouter.chat.ChatResult;
+import com.example.sqlmcpchatopenrouter.chat.ChatOperations;
+import com.example.sqlmcpchatopenrouter.chat.ChatResponse;
 import com.example.sqlmcpchatopenrouter.mcp.McpToolCatalog;
 import com.example.sqlmcpchatopenrouter.mcp.McpToolOperations;
 
@@ -30,15 +29,15 @@ public class ChatController {
 
     private static final long SSE_TIMEOUT_MILLIS = 180_000L;
 
-    private final AiChatOperations aiChatService;
+    private final ChatOperations chatCoordinator;
 
     private final McpToolOperations mcpToolCatalog;
 
     private final AsyncTaskExecutor chatTaskExecutor;
 
-    public ChatController(AiChatOperations aiChatService, McpToolOperations mcpToolCatalog,
+    public ChatController(ChatOperations chatCoordinator, McpToolOperations mcpToolCatalog,
             AsyncTaskExecutor chatTaskExecutor) {
-        this.aiChatService = aiChatService;
+        this.chatCoordinator = chatCoordinator;
         this.mcpToolCatalog = mcpToolCatalog;
         this.chatTaskExecutor = chatTaskExecutor;
     }
@@ -54,7 +53,7 @@ public class ChatController {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "message is required");
         }
 
-        return ResponseEntity.ok(ChatResponse.from(this.aiChatService.chat(request.message(), request.conversationId())));
+        return ResponseEntity.ok(this.chatCoordinator.chat(request.message(), request.conversationId()));
     }
 
     @PostMapping(path = "/chat/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
@@ -67,9 +66,9 @@ public class ChatController {
         this.chatTaskExecutor.execute(() -> {
             try {
                 send(emitter, "progress", new ProgressEvent("accepted", "Request accepted."));
-                ChatResult result = this.aiChatService.chat(request.message(), request.conversationId(),
+                ChatResponse result = this.chatCoordinator.chat(request.message(), request.conversationId(),
                         (stage, message) -> send(emitter, "progress", new ProgressEvent(stage, message)));
-                send(emitter, "complete", ChatResponse.from(result));
+                send(emitter, "complete", result);
                 emitter.complete();
             }
             catch (RuntimeException ex) {
@@ -86,7 +85,7 @@ public class ChatController {
 
     @DeleteMapping("/conversations/{conversationId}/memory")
     public ResponseEntity<Void> clearMemory(@PathVariable String conversationId) {
-        this.aiChatService.clearMemory(conversationId);
+        this.chatCoordinator.clearMemory(conversationId);
         return ResponseEntity.noContent().build();
     }
 
@@ -94,18 +93,6 @@ public class ChatController {
     }
 
     public record ProgressEvent(String stage, String message) {
-    }
-
-    public record ChatResponse(String conversationId, String model, boolean fallbackUsed, String message,
-            List<String> columns, List<List<String>> rows, boolean usedDatabaseTools, boolean partialResults,
-            String dataNotes, String followUpQuestion) {
-
-        static ChatResponse from(ChatResult result) {
-            AssistantAnswer answer = result.answer();
-            return new ChatResponse(result.conversationId(), result.model(), result.fallbackUsed(), answer.answer(),
-                    answer.columns(), answer.rows(), answer.usedDatabaseTools(), answer.partialResults(),
-                    answer.dataNotes(), answer.followUpQuestion());
-        }
     }
 
     private static void send(SseEmitter emitter, String eventName, Object data) {

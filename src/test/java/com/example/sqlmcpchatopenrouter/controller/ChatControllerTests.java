@@ -11,9 +11,9 @@ import org.springframework.core.task.AsyncTaskExecutor;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
-import com.example.sqlmcpchatopenrouter.chat.AiChatOperations;
-import com.example.sqlmcpchatopenrouter.chat.AssistantAnswer;
-import com.example.sqlmcpchatopenrouter.chat.ChatResult;
+import com.example.sqlmcpchatopenrouter.chat.ChatOperations;
+import com.example.sqlmcpchatopenrouter.chat.ChatResponse;
+import com.example.sqlmcpchatopenrouter.chat.ChatResponse.Status;
 import com.example.sqlmcpchatopenrouter.chat.ProgressSink;
 import com.example.sqlmcpchatopenrouter.mcp.McpToolCatalog;
 import com.example.sqlmcpchatopenrouter.mcp.McpToolOperations;
@@ -39,11 +39,11 @@ class ChatControllerTests {
 
     @Test
     void chatMapsStructuredServiceResponse() {
-        AssistantAnswer answer = new AssistantAnswer("There are 4 entities.",
-                List.of("Entity"), List.of(List.of("Customer"), List.of("Order")), true, false, "metadata only", "");
-        this.aiChatService.chatResult = new ChatResult("demo", "minimax/minimax-m3:free", false, answer);
+        this.aiChatService.chatResponse = new ChatResponse("demo", "minimax/minimax-m3:free", false, Status.ANSWER,
+                "There are 4 entities.", List.of("Entity"), List.of(List.of("Customer"), List.of("Order")), true,
+                false, "metadata only", "");
 
-        ChatController.ChatResponse response = this.controller
+        ChatResponse response = this.controller
                 .chat(new ChatController.ChatRequest("List entities", "demo"))
                 .getBody();
 
@@ -81,21 +81,21 @@ class ChatControllerTests {
         }
     }
 
-    static class FakeAiChatOperations implements AiChatOperations {
+    static class FakeAiChatOperations implements ChatOperations {
 
-        private ChatResult chatResult = new ChatResult("demo", "model", false,
-                new AssistantAnswer("", List.of(), List.of(), false, false, "", ""));
+        private ChatResponse chatResponse = new ChatResponse("demo", "model", false, Status.ANSWER, "", List.of(),
+                List.of(), false, false, "", "");
 
         private final List<String> clearedConversations = new ArrayList<>();
 
         @Override
-        public ChatResult chat(String message, String conversationId) {
-            return this.chatResult;
+        public ChatResponse chat(String message, String conversationId) {
+            return this.chatResponse;
         }
 
         @Override
-        public ChatResult chat(String message, String conversationId, ProgressSink progressSink) {
-            return this.chatResult;
+        public ChatResponse chat(String message, String conversationId, ProgressSink progressSink) {
+            return this.chatResponse;
         }
 
         @Override
