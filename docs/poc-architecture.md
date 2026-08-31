@@ -16,7 +16,7 @@ Reading the diagram in one pass:
 |---|---|
 | User experience | A business user asks questions through the chat UI. Authentication / OIDC is shown as a future production capability, not part of the current POC. |
 | AI application | The Spring Boot AI Application coordinates the request, applies safety and governance controls, and returns a structured response for the UI. |
-| Model | The OpenRouter LLM interprets the request, but it has no direct database access. |
+| Model | The OpenAI LLM interprets the request, but it has no direct database access. |
 | Data access | DAB MCP tools expose approved describe, read, and aggregate operations through Microsoft Data API Builder. SQL Server access is read-only. |
 
 ## Interactive Layer-by-Layer Query Flow
@@ -45,7 +45,7 @@ sequenceDiagram
     participant Prompt as PromptProvider
     participant Runner as ChatModelRunner
     participant Client as Spring AI ChatClient
-    participant LLM as OpenRouter LLM
+    participant LLM as OpenAI LLM
     participant MCP as DAB MCP Tools
     participant DAB as Microsoft DAB
     participant SQL as SQL Server
@@ -104,7 +104,7 @@ The diagram uses business-facing labels. This table keeps the responsibilities a
 | AI Coordinator | Controls request flow for each chat turn. |
 | Safety & Governance Controls | Applies PII protection, sanitized memory, read-only rules, and strong instructions. |
 | Structured Response | Formats status, message, columns, rows, and notes for the UI. |
-| OpenRouter LLM | Interprets the request and requests approved tools; it has no direct database connection. |
+| OpenAI LLM | Interprets the request and requests approved tools; it has no direct database connection. |
 | DAB MCP Tools | Provides approved describe, read, and aggregate operations. |
 | Microsoft Data API Builder | Mediates the configured entities and permitted data operations. |
 | SQL Server | Stores source data and enforces read-only access. |

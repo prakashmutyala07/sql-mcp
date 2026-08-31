@@ -166,7 +166,7 @@ class ChatModelRunnerTests {
                 new AppProperties.Models("primary", "fallback"),
                 new AppProperties.Execution(true, primaryRetryEnabled, 1200, 0.1, Duration.ofSeconds(10),
                         responseFormat),
-                new AppProperties.Memory(20), new AppProperties.Openrouter("", "test"),
+                new AppProperties.Memory(20),
                 new AppProperties.Security("unit-test-secret"), new AppProperties.Logging(false), List.of());
         com.example.sqlmcpchatopenrouter.config.SensitiveLoggingPolicy loggingPolicy =
                 new com.example.sqlmcpchatopenrouter.config.SensitiveLoggingPolicy(properties,

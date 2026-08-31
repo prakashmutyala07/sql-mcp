@@ -1,6 +1,6 @@
-# SQL MCP Chat OpenRouter
+# SQL MCP Chat OpenAI
 
-Standalone Spring AI proof of concept for OpenRouter chat models and a local Microsoft Data API Builder MCP server.
+Standalone Spring AI proof of concept for OpenAI chat models and a local Microsoft Data API Builder MCP server.
 
 ## Verified Setup Choices
 
@@ -9,7 +9,7 @@ Standalone Spring AI proof of concept for OpenRouter chat models and a local Mic
 - Spring AI BOM: 2.0.1
 - Base package: `com.example.sqlmcpchatopenrouter`
 - MCP transport: Streamable HTTP, configured through `.env`
-- Chat provider: Spring AI OpenAI-compatible starter, pointed at OpenRouter
+- Chat provider: Spring AI OpenAI starter, pointed at OpenAI
 
 ## Local Configuration
 
@@ -20,10 +20,9 @@ file is ignored by git and should not be committed.
 Required values:
 
 ```properties
-OPENROUTER_API_KEY=...
+OPENAI_API_KEY=...
 TOKEN_SECRET_KEY=...
 DAB_MCP_BASE_URL=http://localhost:5001
-OPENROUTER_HTTP_REFERER=http://localhost:8080
 ECOM_MSSQL_CONNECTION_STRING=...
 ```
 
@@ -48,7 +47,7 @@ the prompt and the final response is still parsed into the typed response contra
 - Keep local secrets only in `.env`.
 - Commit `.env.example` with placeholder values so other machines know which keys are required.
 - Use GitHub Actions repository secrets for CI/CD variables instead of committing keys.
-- Rotate `OPENROUTER_API_KEY` immediately if it is ever pasted into chat, logs, screenshots, or git history.
+- Rotate `OPENAI_API_KEY` immediately if it is ever pasted into chat, logs, screenshots, or git history.
 - Generate `TOKEN_SECRET_KEY` as a long random value and keep it stable for one local environment.
 - Supply the SQL setup script's reader password with sqlcmd, for example
   `sqlcmd -v ECOM_DAB_READER_PASSWORD="..." -i dab/ecommerce/setup-ecommerce.sql`.
@@ -100,7 +99,7 @@ ChatController -> ChatCoordinator -> PII guard -> Spring AI ChatClient
 ```
 
 Inbound email, phone, and explicitly identified customer-name values are pseudonymized before
-they reach OpenRouter. Sensitive DAB result fields are pseudonymized at the tool-callback boundary
+they reach OpenAI. Sensitive DAB result fields are pseudonymized at the tool-callback boundary
 before the model sees them. The application stores chat memory explicitly only after input
 protection and structured-output redaction; it does not use `MessageChatMemoryAdvisor`, which can
 otherwise capture raw model output before application-level redaction. Responses retain stable

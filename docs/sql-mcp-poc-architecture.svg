@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1450" height="900" viewBox="0 0 1450 900" role="img" aria-labelledby="title desc">
   <title id="title">Read-only SQL MCP AI Assistant - POC Architecture</title>
-  <desc id="desc">Management-friendly architecture diagram showing Business User to Chat UI to Spring Boot AI Application to OpenRouter LLM to DAB MCP Tools to Microsoft Data API Builder to SQL Server read-only access.</desc>
+  <desc id="desc">Management-friendly architecture diagram showing Business User to Chat UI to Spring Boot AI Application to OpenAI LLM to DAB MCP Tools to Microsoft Data API Builder to SQL Server read-only access.</desc>
   <defs>
     <marker id="arrow" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="10" markerHeight="10" orient="auto-start-reverse">
       <path d="M 0 0 L 12 6 L 0 12 z" fill="#334155"/>
@@ -62,7 +62,7 @@
   <text x="675" y="525" text-anchor="middle" class="box-text green-text">Summary · table · status · notes</text>
 
   <rect x="910" y="365" width="180" height="80" rx="8" fill="#fff2cc" stroke="#d6b656" stroke-width="2"/>
-  <text x="1000" y="394" text-anchor="middle" class="box-title">OpenRouter LLM</text>
+  <text x="1000" y="394" text-anchor="middle" class="box-title">OpenAI LLM</text>
   <text x="1000" y="416" text-anchor="middle" class="box-text amber-text">Interprets request</text>
   <text x="1000" y="435" text-anchor="middle" class="box-text amber-text">No direct DB access</text>
 

@@ -5,7 +5,7 @@ import java.util.List;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 @ConfigurationProperties("app")
-public record AppProperties(Models models, Execution execution, Memory memory, Openrouter openrouter,
+public record AppProperties(Models models, Execution execution, Memory memory,
         Security security, Logging logging, List<SensitiveField> sensitiveFields) {
 
     public AppProperties {
@@ -33,9 +33,6 @@ public record AppProperties(Models models, Execution execution, Memory memory, O
     }
 
     public record Memory(int maxMessages) {
-    }
-
-    public record Openrouter(String referer, String title) {
     }
 
     public record Security(String tokenSecretKey) {

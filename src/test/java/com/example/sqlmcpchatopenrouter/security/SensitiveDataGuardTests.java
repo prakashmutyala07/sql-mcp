@@ -41,7 +41,6 @@ class SensitiveDataGuardTests {
                 new AppProperties.Execution(true, false, 1200, 0.1, java.time.Duration.ofSeconds(120),
                         AppProperties.ResponseFormat.JSON_SCHEMA),
                 new AppProperties.Memory(20),
-                new AppProperties.Openrouter("", "title"),
                 new AppProperties.Security("unit-test-secret"),
                 new AppProperties.Logging(false),
                 List.of(new AppProperties.SensitiveField("Customer", "FullName", "CU"),

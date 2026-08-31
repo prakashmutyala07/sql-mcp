@@ -8,10 +8,10 @@ spring:
       chat: openai
       embedding: none
     openai:
-      base-url: https://openrouter.ai/api/v1
-      api-key: ${OPENROUTER_API_KEY:}
+      base-url: https://api.openai.com/v1
+      api-key: ${OPENAI_API_KEY:}
       chat:
-        model: ${APP_MODELS_PRIMARY:minimax/minimax-m3:free}
+        model: ${APP_MODELS_PRIMARY:gpt-4.1-mini}
     mcp:
       client:
         enabled: true
@@ -51,8 +51,8 @@ spring:
 
 app:
   models:
-    primary: ${APP_MODELS_PRIMARY:minimax/minimax-m3:free}
-    fallback: ${APP_MODELS_FALLBACK:z-ai/glm-5.2:free}
+    primary: ${APP_MODELS_PRIMARY:gpt-4.1-mini}
+    fallback: ${APP_MODELS_FALLBACK:gpt-4.1-nano}
   execution:
     fallback-enabled: ${APP_FALLBACK_ENABLED:true}
     primary-retry-enabled: ${APP_PRIMARY_RETRY_ENABLED:false}
@@ -63,9 +63,6 @@ app:
     response-format: ${APP_RESPONSE_FORMAT:prompt_json}
   memory:
     max-messages: ${APP_MEMORY_MAX_MESSAGES:20}
-  openrouter:
-    referer: ${OPENROUTER_HTTP_REFERER:}
-    title: ${OPENROUTER_X_TITLE:sql-mcp-chat-openrouter}
   security:
     token-secret-key: ${TOKEN_SECRET_KEY:}
   logging:

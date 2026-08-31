@@ -1,9 +1,7 @@
 package com.example.sqlmcpchatopenrouter.chat;
 
 import java.util.Arrays;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -16,7 +14,6 @@ import org.springframework.ai.openai.OpenAiChatOptions;
 import org.springframework.ai.tool.ToolCallback;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
-import org.springframework.util.StringUtils;
 import org.springframework.web.server.ResponseStatusException;
 
 import com.example.sqlmcpchatopenrouter.config.AppProperties;
@@ -24,7 +21,7 @@ import com.example.sqlmcpchatopenrouter.security.SensitiveRequestContext;
 import com.openai.errors.OpenAIInvalidDataException;
 import com.openai.errors.RateLimitException;
 
-/** Owns model invocation policy, OpenRouter options, and structured-output conversion. */
+/** Owns model invocation policy, OpenAI options, and structured-output conversion. */
 @Component
 public class ChatModelRunner {
 
@@ -51,6 +48,9 @@ public class ChatModelRunner {
     public ChatModelRunner(ChatClient.Builder chatClientBuilder, AppProperties properties) {
         this.chatClient = chatClientBuilder.build();
         this.properties = properties;
+        logger.info("Provider: OpenAI");
+        logger.info("Primary model: {}", properties.models().primary());
+        logger.info("Fallback model: {}", properties.models().fallback());
     }
 
     public Result run(String message, String systemPrompt, List<Message> history, ToolCallback[] tools,
@@ -93,7 +93,8 @@ public class ChatModelRunner {
         }
         catch (ModelCallException fallbackFailure) {
             logModelFailure(fallbackFailure, requestId);
-            throw chatFailure(userMessageFor("Primary and fallback models both failed.", fallbackFailure));
+            throw chatFailure(userMessageFor("Primary model " + this.properties.models().primary()
+                    + " and fallback model " + fallback + " both failed.", fallbackFailure));
         }
     }
 
@@ -188,8 +189,7 @@ public class ChatModelRunner {
                 .toolCallbacks(tools)
                 .parallelToolCalls(false)
                 .timeout(this.properties.execution().requestTimeout())
-                .maxRetries(0)
-                .customHeaders(openRouterHeaders());
+                .maxRetries(0);
         if (this.properties.execution().responseFormat() == AppProperties.ResponseFormat.JSON_SCHEMA) {
             options.responseFormat(OpenAiChatModel.ResponseFormat.builder()
                     .type(OpenAiChatModel.ResponseFormat.Type.JSON_SCHEMA)
@@ -205,17 +205,6 @@ public class ChatModelRunner {
             return systemPrompt + "\n\n" + this.answerConverter.getFormat();
         }
         return systemPrompt;
-    }
-
-    private Map<String, String> openRouterHeaders() {
-        Map<String, String> headers = new LinkedHashMap<>();
-        if (StringUtils.hasText(this.properties.openrouter().referer())) {
-            headers.put("HTTP-Referer", this.properties.openrouter().referer());
-        }
-        if (StringUtils.hasText(this.properties.openrouter().title())) {
-            headers.put("X-Title", this.properties.openrouter().title());
-        }
-        return headers;
     }
 
     private static void logUsage(String model, org.springframework.ai.chat.model.ChatResponse response,
@@ -237,7 +226,7 @@ public class ChatModelRunner {
     }
 
     private static void logModelFailure(ModelCallException failure, String requestId) {
-        logger.warn("[STEP 4 - AI MODEL] requestId={} provider request failed model={} errorType={} durationMs={}",
+        logger.warn("[STEP 4 - AI MODEL] requestId={} provider=OpenAI request failed model={} errorType={} durationMs={}",
                 requestId, failure.model(),
                 failure.getCause().getClass().getSimpleName(), failure.elapsedMs());
     }

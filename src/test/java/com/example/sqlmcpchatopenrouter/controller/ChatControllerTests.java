@@ -55,7 +55,7 @@ class ChatControllerTests {
 
     @Test
     void chatMapsStructuredServiceResponse() {
-        this.aiChatService.chatResponse = new ChatResponse("demo", "minimax/minimax-m3:free", false, Status.ANSWER,
+        this.aiChatService.chatResponse = new ChatResponse("demo", "gpt-4.1-mini", false, Status.ANSWER,
                 "There are 4 entities.", List.of("Entity"), List.of(List.of("Customer"), List.of("Order")), true,
                 false, "metadata only", "");
 
@@ -65,7 +65,7 @@ class ChatControllerTests {
 
         assertThat(response).isNotNull();
         assertThat(response.conversationId()).isEqualTo("demo");
-        assertThat(response.model()).isEqualTo("minimax/minimax-m3:free");
+        assertThat(response.model()).isEqualTo("gpt-4.1-mini");
         assertThat(response.columns()).containsExactly("Entity");
         assertThat(response.rows()).hasSize(2);
         assertThat(response.message()).isEqualTo("There are 4 entities.");

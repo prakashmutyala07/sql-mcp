@@ -574,7 +574,7 @@
         summary: "Spring AI sends protected context and tool definitions to the LLM.",
         input: "Protected user message:\ngive me details of customer CU_3398e6\n\nAvailable tools:\naggregate_records\ndescribe_entities\nread_records",
         does: "The model reasons over the protected request and approved tool descriptions. It can plan which tool to call, but it cannot connect directly to SQL Server and does not receive raw customer PII.",
-        output: "Model intent:\nFind the Customer record that corresponds to the protected customer token, then return profile fields in the required structured response format.\n\nUseful trace detail:\nmodel = minimax/minimax-m3:free\nresponseFormat = PROMPT_JSON"
+        output: "Model intent:\nFind the Customer record that corresponds to the protected customer token, then return profile fields in the required structured response format.\n\nUseful trace detail:\nmodel = gpt-4.1-mini\nresponseFormat = PROMPT_JSON"
       },
       {
         name: "Approved MCP Tool Call",

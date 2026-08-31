@@ -40,7 +40,6 @@ class SensitiveLoggingPolicyTests {
                 new AppProperties.Execution(true, false, 1200, 0.1, Duration.ofSeconds(10),
                         AppProperties.ResponseFormat.JSON_SCHEMA),
                 new AppProperties.Memory(20),
-                new AppProperties.Openrouter("", "test"),
                 new AppProperties.Security("unit-test-secret"),
                 new AppProperties.Logging(logSensitiveData),
                 List.of());

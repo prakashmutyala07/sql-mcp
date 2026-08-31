@@ -14,7 +14,6 @@ class AiConfigurationTests {
                 new AppProperties.Execution(true, false, 1200, 0.1, java.time.Duration.ofSeconds(120),
                         AppProperties.ResponseFormat.JSON_SCHEMA),
                 new AppProperties.Memory(3),
-                new AppProperties.Openrouter("", "title"),
                 new AppProperties.Security("secret"),
                 new AppProperties.Logging(false),
                 java.util.List.of());
