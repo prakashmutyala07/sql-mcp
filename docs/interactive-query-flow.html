@@ -9,22 +9,17 @@
       --bg: #f7f8fb;
       --surface: #ffffff;
       --ink: #182132;
-      --muted: #66758a;
+      --muted: #68778d;
       --line: #d8e0ea;
-      --line-strong: #aebacd;
       --active: #172033;
-      --blue-bg: #e1efff;
-      --blue: #2d74c4;
-      --green-bg: #def7e8;
-      --green: #247c4d;
-      --violet-bg: #f1e4ff;
-      --violet: #8145b3;
-      --amber-bg: #fff0c4;
-      --amber: #a86d00;
-      --teal-bg: #dcf6f3;
-      --teal: #0e837b;
-      --red-bg: #ffe5e4;
-      --red: #b8433f;
+      --user-bg: #e3f0ff;
+      --user-edge: #2d74c4;
+      --app-bg: #e4f7ec;
+      --app-edge: #247c4d;
+      --model-bg: #fff0c4;
+      --model-edge: #a86d00;
+      --data-bg: #def5f2;
+      --data-edge: #0e837b;
       --shadow: 0 18px 42px rgba(28, 40, 60, 0.12);
     }
 
@@ -39,14 +34,14 @@
     }
 
     .page {
-      max-width: 1420px;
+      max-width: 1380px;
       margin: 0 auto;
       padding: 28px;
     }
 
     header {
       display: grid;
-      grid-template-columns: minmax(0, 1fr) minmax(300px, 440px);
+      grid-template-columns: minmax(0, 1fr) minmax(300px, 430px);
       gap: 18px;
       align-items: end;
       margin-bottom: 18px;
@@ -62,14 +57,14 @@
     }
 
     .subtitle {
-      max-width: 900px;
+      max-width: 870px;
       margin-bottom: 0;
       color: var(--muted);
       font-size: 15px;
     }
 
     .query-card,
-    .metric,
+    .principle,
     .canvas-wrap,
     .detail-panel,
     .note-card {
@@ -117,23 +112,26 @@
       font-weight: 800;
     }
 
-    .metrics {
+    .principles {
       display: grid;
       grid-template-columns: repeat(4, minmax(0, 1fr));
       gap: 10px;
       margin-bottom: 14px;
     }
 
-    .metric { padding: 12px; }
+    .principle {
+      padding: 13px 14px;
+    }
 
-    .metric-value {
+    .principle-title {
       display: block;
+      margin-bottom: 4px;
       color: var(--ink);
-      font-size: 20px;
+      font-size: 17px;
       font-weight: 900;
     }
 
-    .metric-label {
+    .principle-text {
       color: var(--muted);
       font-size: 12px;
       font-weight: 700;
@@ -142,7 +140,7 @@
     .legend {
       display: flex;
       flex-wrap: wrap;
-      gap: 10px;
+      gap: 12px;
       margin-bottom: 18px;
     }
 
@@ -162,16 +160,14 @@
       border-radius: 4px;
     }
 
-    .swatch.ui { background: var(--blue-bg); border-color: var(--blue); }
-    .swatch.app { background: var(--green-bg); border-color: var(--green); }
-    .swatch.safe { background: var(--violet-bg); border-color: var(--violet); }
-    .swatch.model { background: var(--amber-bg); border-color: var(--amber); }
-    .swatch.data { background: var(--teal-bg); border-color: var(--teal); }
-    .swatch.retry { background: var(--red-bg); border-color: var(--red); }
+    .swatch.user { background: var(--user-bg); border-color: var(--user-edge); }
+    .swatch.app { background: var(--app-bg); border-color: var(--app-edge); }
+    .swatch.model { background: var(--model-bg); border-color: var(--model-edge); }
+    .swatch.data { background: var(--data-bg); border-color: var(--data-edge); }
 
     .workspace {
       display: grid;
-      grid-template-columns: minmax(0, 1fr) 410px;
+      grid-template-columns: minmax(0, 1fr) 430px;
       gap: 18px;
       align-items: start;
     }
@@ -211,16 +207,16 @@
 
     .flow {
       display: grid;
-      grid-template-columns: repeat(6, minmax(145px, 1fr));
-      gap: 12px;
+      grid-template-columns: repeat(3, minmax(180px, 1fr));
+      gap: 14px;
     }
 
     .step {
       position: relative;
-      min-height: 116px;
+      min-height: 132px;
       width: 100%;
-      padding: 14px;
-      border: 2px solid var(--line-strong);
+      padding: 16px;
+      border: 2px solid var(--line);
       border-radius: 8px;
       appearance: none;
       color: var(--ink);
@@ -233,15 +229,15 @@
       content: "";
       position: absolute;
       top: 50%;
-      right: -14px;
-      width: 14px;
+      right: -16px;
+      width: 16px;
       height: 2px;
       background: #aebacd;
     }
 
+    .step:nth-child(3)::after,
     .step:nth-child(6)::after,
-    .step:nth-child(12)::after,
-    .step:nth-child(18)::after {
+    .step:nth-child(9)::after {
       display: none;
     }
 
@@ -255,27 +251,27 @@
       box-shadow: 0 0 0 4px rgba(23, 32, 51, 0.13), 0 16px 28px rgba(23, 32, 51, 0.16);
     }
 
-    .step.done { opacity: 0.72; }
+    .step.done { opacity: 0.76; }
 
     .step-num {
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      width: 23px;
-      height: 23px;
-      margin-bottom: 9px;
+      width: 25px;
+      height: 25px;
+      margin-bottom: 12px;
       border: 1px solid rgba(24, 33, 50, 0.2);
       border-radius: 50%;
-      background: rgba(255, 255, 255, 0.75);
+      background: rgba(255, 255, 255, 0.78);
       font-size: 12px;
       font-weight: 900;
     }
 
     .step-name {
-      margin-bottom: 6px;
-      font-size: 14px;
+      margin-bottom: 7px;
+      font-size: 16px;
       font-weight: 900;
-      line-height: 1.26;
+      line-height: 1.24;
       overflow-wrap: anywhere;
       word-break: break-word;
     }
@@ -284,15 +280,14 @@
       margin-bottom: 0;
       color: #41506a;
       font-size: 12px;
+      font-weight: 800;
       line-height: 1.35;
     }
 
-    .step.ui { background: var(--blue-bg); border-color: var(--blue); }
-    .step.app { background: var(--green-bg); border-color: var(--green); }
-    .step.safe { background: var(--violet-bg); border-color: var(--violet); }
-    .step.model { background: var(--amber-bg); border-color: var(--amber); }
-    .step.data { background: var(--teal-bg); border-color: var(--teal); }
-    .step.retry { background: var(--red-bg); border-color: var(--red); }
+    .step.user { background: var(--user-bg); border-color: var(--user-edge); }
+    .step.app { background: var(--app-bg); border-color: var(--app-edge); }
+    .step.model { background: var(--model-bg); border-color: var(--model-edge); }
+    .step.data { background: var(--data-bg); border-color: var(--data-edge); }
     .step.active { border-color: var(--active); }
 
     .controls {
@@ -381,7 +376,7 @@
 
     pre {
       margin: 0;
-      max-height: 280px;
+      max-height: 310px;
       overflow: auto;
       padding: 12px;
       border: 1px solid var(--line);
@@ -423,17 +418,8 @@
       .detail-panel { position: static; }
       .flow { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 
-      .step:nth-child(3)::after,
-      .step:nth-child(6)::after,
-      .step:nth-child(9)::after,
-      .step:nth-child(12)::after,
-      .step:nth-child(15)::after,
-      .step:nth-child(18)::after {
-        display: none;
-      }
-
       .notes,
-      .metrics {
+      .principles {
         grid-template-columns: repeat(2, minmax(0, 1fr));
       }
     }
@@ -443,23 +429,20 @@
 
       .flow,
       .notes,
-      .metrics {
+      .principles {
         grid-template-columns: 1fr;
       }
 
       .step::after {
         right: 50%;
         top: auto;
-        bottom: -14px;
+        bottom: -16px;
         width: 2px;
-        height: 14px;
+        height: 16px;
       }
 
       .step:nth-child(3)::after,
-      .step:nth-child(6)::after,
-      .step:nth-child(9)::after,
-      .step:nth-child(12)::after,
-      .step:nth-child(15)::after {
+      .step:nth-child(6)::after {
         display: block;
       }
     }
@@ -470,42 +453,40 @@
     <header>
       <div>
         <h1>Interactive Query Flow</h1>
-        <p class="subtitle">A stage-by-stage walkthrough of the real Ethan Thomas trace: raw user input, local-sensitive logs, PII tokenization, model tool retries, secure DAB reads, sanitized memory, and the final UI response that is detokenized before it reaches the browser.</p>
+        <p class="subtitle">A concise architecture walkthrough for the POC: a natural-language customer question moves through the chat API, PII protection, Spring AI orchestration, approved MCP tooling, Microsoft Data API Builder, SQL Server, sanitized memory, and a policy-aware final UI response.</p>
       </div>
       <section class="query-card" aria-label="Example query">
-        <p class="eyebrow">Observed request</p>
+        <p class="eyebrow">Example request</p>
         <p class="query-text">"give me the details of customer Ethan Thomas"</p>
         <p class="query-meta">
-          <span class="tag">requestId cd16d882</span>
-          <span class="tag">model minimax-m3</span>
-          <span class="tag">local tracing enabled</span>
+          <span class="tag">customer lookup</span>
+          <span class="tag">protected AI path</span>
+          <span class="tag">read-only data access</span>
         </p>
       </section>
     </header>
 
-    <section class="metrics" aria-label="Trace metrics">
-      <div class="metric"><span class="metric-value">18</span><span class="metric-label">visible stages</span></div>
-      <div class="metric"><span class="metric-value">1</span><span class="metric-label">input PII token</span></div>
-      <div class="metric"><span class="metric-value">3</span><span class="metric-label">approved DAB tools</span></div>
-      <div class="metric"><span class="metric-value">55.3s</span><span class="metric-label">observed turn duration</span></div>
+    <section class="principles" aria-label="Architecture principles">
+      <div class="principle"><span class="principle-title">PII Protected</span><span class="principle-text">Sensitive values are tokenized before external model use.</span></div>
+      <div class="principle"><span class="principle-title">Read Only</span><span class="principle-text">The model can request approved read tools, not direct database access.</span></div>
+      <div class="principle"><span class="principle-title">Structured Output</span><span class="principle-text">Responses return predictable status, text, rows, warnings, and notes.</span></div>
+      <div class="principle"><span class="principle-title">Sanitized Memory</span><span class="principle-text">Conversation history stores protected content for safer follow-ups.</span></div>
     </section>
 
     <nav class="legend" aria-label="Legend">
-      <span class="legend-item"><span class="swatch ui"></span>UI / API</span>
-      <span class="legend-item"><span class="swatch app"></span>Spring orchestration</span>
-      <span class="legend-item"><span class="swatch safe"></span>PII guardrail</span>
-      <span class="legend-item"><span class="swatch model"></span>Model loop</span>
-      <span class="legend-item"><span class="swatch data"></span>MCP / DAB / SQL</span>
-      <span class="legend-item"><span class="swatch retry"></span>Tool retry / correction</span>
+      <span class="legend-item"><span class="swatch user"></span>User / API</span>
+      <span class="legend-item"><span class="swatch app"></span>AI Application</span>
+      <span class="legend-item"><span class="swatch model"></span>AI Model</span>
+      <span class="legend-item"><span class="swatch data"></span>Data Platform</span>
     </nav>
 
     <section class="workspace">
       <div class="canvas-wrap">
         <div class="title-row">
-          <h2 class="canvas-title">Live Trace Canvas</h2>
-          <span class="step-pill" id="stepCounter">Step 1 of 18</span>
+          <h2 class="canvas-title">Architecture Walkthrough</h2>
+          <span class="step-pill" id="stepCounter">Step 1 of 9</span>
         </div>
-        <div class="flow" id="flow" aria-label="Interactive query stages"></div>
+        <div class="flow" id="flow" aria-label="Interactive architecture stages"></div>
         <div class="controls" aria-label="Step controls">
           <button id="prevBtn" type="button">Previous</button>
           <button id="nextBtn" class="primary" type="button">Next</button>
@@ -517,42 +498,42 @@
 
       <aside class="detail-panel" aria-live="polite">
         <div class="panel-top">
-          <h2 class="panel-title" id="panelTitle">Chat UI</h2>
-          <span class="step-pill" id="panelCategory">UI / API</span>
+          <h2 class="panel-title" id="panelTitle">User Question</h2>
+          <span class="step-pill" id="panelCategory">User / API</span>
         </div>
         <p class="panel-subtitle" id="panelSummary"></p>
 
         <section class="detail-section">
-          <h3 class="detail-heading">Log Signal</h3>
-          <pre id="panelLog"></pre>
+          <h3 class="detail-heading">Input</h3>
+          <pre id="panelInput"></pre>
         </section>
         <section class="detail-section">
           <h3 class="detail-heading">What Happens</h3>
           <p class="detail-text" id="panelDoes"></p>
         </section>
         <section class="detail-section">
-          <h3 class="detail-heading">Next Handoff</h3>
-          <pre id="panelNext"></pre>
+          <h3 class="detail-heading">Output / Next Handoff</h3>
+          <pre id="panelOutput"></pre>
         </section>
       </aside>
     </section>
 
     <section class="notes" aria-label="Design notes">
       <article class="note-card">
-        <h3>Raw Input Is Visible In Local Logs</h3>
-        <p>When local sensitive logging is enabled, the trace prints the user's actual message so debugging starts from what was typed.</p>
+        <h3>Business Friendly Flow</h3>
+        <p>The canvas stays at architecture level while the right panel provides enough detail for technical review.</p>
       </article>
       <article class="note-card">
-        <h3>Model And Memory Stay Protected</h3>
-        <p>The model receives CU_3398e6, and memory is written after protection so stored conversation context remains sanitized.</p>
+        <h3>External Model Boundary</h3>
+        <p>The external LLM receives protected customer tokens rather than raw name, email, or phone values.</p>
       </article>
       <article class="note-card">
-        <h3>Tool Mistakes Are Traceable</h3>
-        <p>Invalid filters, invalid selected fields, empty reads, token resolution, and corrected reads are all visible as separate stages.</p>
+        <h3>Governed Data Access</h3>
+        <p>MCP and DAB mediate SQL Server access through approved read-only operations.</p>
       </article>
       <article class="note-card">
-        <h3>UI Boundary Detokenizes</h3>
-        <p>The final browser response is detokenized at the handoff, so the user sees Ethan Thomas while protected internals remain auditable.</p>
+        <h3>Policy-Aware UI</h3>
+        <p>Sensitive values are restored only when allowed by response policy; otherwise they stay tokenized or are omitted.</p>
       </article>
     </section>
   </main>
@@ -560,166 +541,85 @@
   <script>
     const stages = [
       {
-        name: "Chat UI",
-        category: "UI / API",
-        type: "ui",
-        summary: "The browser captures the user's exact business question.",
-        log: "User bubble:\ngive me the details of customer Ethan Thomas",
-        does: "The UI sends the natural-language message to the backend without needing schema or SQL knowledge.",
-        next: "POST /api/chat\n{\n  \"message\": \"give me the details of customer Ethan Thomas\"\n}"
+        name: "User Question",
+        category: "User / API",
+        type: "user",
+        summary: "A business user asks for customer details in natural language.",
+        input: "User enters:\ngive me the details of customer Ethan Thomas",
+        does: "The user does not need to know table names, filters, joins, or tool syntax. The POC accepts the business question as ordinary chat input.",
+        output: "Chat request payload:\n{\n  \"message\": \"give me the details of customer Ethan Thomas\"\n}"
       },
       {
-        name: "CHAT_REQUEST",
-        category: "Spring orchestration",
+        name: "API / Chat Coordinator",
+        category: "AI Application",
         type: "app",
-        summary: "The coordinator opens a request-scoped trace.",
-        log: "[CHAT_REQUEST]\nrequestId=cd16d882\nconversationId=37d259af\ninputChars=44\nmessage=\"give me the details of customer Ethan Thomas\"",
-        does: "A request id is assigned and every later stage logs against the same id, making the end-to-end path searchable.",
-        next: "Send raw message to SensitiveDataGuard for input inspection."
+        summary: "The application creates one traceable request lifecycle.",
+        input: "Incoming request:\nmessage = \"give me the details of customer Ethan Thomas\"\nconversationId = active chat session",
+        does: "The chat API forwards the turn to the coordinator. The coordinator attaches a request id, applies guardrails in order, loads safe conversation context, invokes the model runner, writes sanitized memory, and returns a structured response to the UI.",
+        output: "Useful trace detail:\nrequestId = cd16d882\ninputChars = 44\n\nNext handoff:\nSend the raw input to the PII protection layer."
       },
       {
-        name: "PII_DETECTION",
-        category: "PII guardrail",
-        type: "safe",
-        summary: "The guard detects one customer-name entity.",
-        log: "[PII_DETECTION]\nrequestId=cd16d882\nentities=1\ntokenTypes=[CU]\ndurationMs=0",
-        does: "The local-sensitive log confirms that the input contained one protectable customer value.",
-        next: "Create stable pseudonym token CU_3398e6 for Ethan Thomas."
-      },
-      {
-        name: "PII_PROTECTION",
-        category: "PII guardrail",
-        type: "safe",
-        summary: "The raw name is replaced before model use.",
-        log: "[PII_PROTECTION]\nrequestId=cd16d882\nprotected=true\ntokens=1\nprotectedMessage=\"give me the details of customer CU_3398e6\"",
-        does: "The sensitive name is replaced with a stable customer token. That protected message is what goes into the model path.",
-        next: "Protected user message:\ngive me the details of customer CU_3398e6"
-      },
-      {
-        name: "MEMORY_CONTEXT",
-        category: "Spring orchestration",
+        name: "PII Protection",
+        category: "AI Application",
         type: "app",
-        summary: "Safe prior conversation context is attached.",
-        log: "[MEMORY_CONTEXT]\nrequestId=cd16d882\nconversationId=37d259af\nsanitized=true\nmessages=0",
-        does: "The coordinator reads memory for the conversation and confirms that context entering the prompt is sanitized.",
-        next: "System prompt + protected user message + sanitized memory."
+        summary: "Sensitive input is tokenized before it reaches the external model.",
+        input: "Raw:\nEthan Thomas\n\nFull message:\ngive me the details of customer Ethan Thomas",
+        does: "The application detects the customer name and replaces it with a stable pseudonym. The model path uses the protected text, while the secure token map remains inside the application boundary.",
+        output: "Protected:\nCU_3398e6\n\nLLM input:\ngive me details of customer CU_3398e6\n\nUseful trace detail:\nentities = 1\ntokenTypes = [CU]"
       },
       {
-        name: "MODEL_REQUEST",
-        category: "Model loop",
+        name: "Spring AI + LLM",
+        category: "AI Model",
         type: "model",
-        summary: "The model receives guarded context and approved tools.",
-        log: "[MODEL_REQUEST]\nrequestId=cd16d882\nmodel=minimax/minimax-m3:free\nhistoryMessages=0\ntools=3\nresponseFormat=PROMPT_JSON\ntoolNames=[aggregate_records, describe_entities, read_records]",
-        does: "Spring AI sends the protected prompt to OpenRouter and exposes only the configured read-only DAB MCP tools.",
-        next: "The model decides it needs schema details before reading data."
+        summary: "Spring AI sends protected context and tool definitions to the LLM.",
+        input: "Protected user message:\ngive me details of customer CU_3398e6\n\nAvailable tools:\naggregate_records\ndescribe_entities\nread_records",
+        does: "The model reasons over the protected request and approved tool descriptions. It can plan which tool to call, but it cannot connect directly to SQL Server and does not receive raw customer PII.",
+        output: "Model intent:\nFind the Customer record that corresponds to the protected customer token, then return profile fields in the required structured response format.\n\nUseful trace detail:\nmodel = minimax/minimax-m3:free\nresponseFormat = PROMPT_JSON"
       },
       {
-        name: "Describe Entity",
-        category: "MCP / DAB / SQL",
-        type: "data",
-        summary: "The model asks for table/entity metadata.",
-        log: "[TOOL_REQUEST]\ntool=describe_entities\nintent=keys=[entities]\n\n[DAB_CALL]\ntool=describe_entities\ndurationMs=46\nresultBytes=1679",
-        does: "The app logs the tool request, crosses the secure boundary, calls DAB, and protects the schema result before returning it to the model.",
-        next: "Customer fields include CustomerId, FullName, Email, Phone, City, StateProvince, Country, CreatedDate, and LoyaltyTier."
-      },
-      {
-        name: "Attempt 1",
-        category: "Tool retry / correction",
-        type: "retry",
-        summary: "The first read uses the customer token as CustomerId.",
-        log: "[TOOL_REQUEST]\ntool=read_records\nfilter=\"CustomerId eq 'CU_3398e6'\"\n\n[DAB_CALL]\ntool=read_records\ndurationMs=32\nerror=incompatible types Edm.Int32 and Edm.String",
-        does: "The trace makes the mistake clear: CustomerId is numeric, but the model tried to compare it to the CU token string.",
-        next: "Model receives protected tool error and must correct the filter."
-      },
-      {
-        name: "Attempt 2",
-        category: "Tool retry / correction",
-        type: "retry",
-        summary: "The next read uses an invalid field selection.",
-        log: "[TOOL_REQUEST]\ntool=read_records\nfilter=\"CustomerId eq 3398\"\nselect=\"CustomerId, FullName, Email, Phone, City, StateProvince, Country, CreatedDate, LoyaltyTier\"\n\n[DAB_CALL]\nerror=invalid field requested",
-        does: "The request reaches DAB, but the selected field formatting does not match the tool contract, so the call is rejected.",
-        next: "The model continues with another corrected tool attempt."
-      },
-      {
-        name: "Attempt 3",
-        category: "Tool retry / correction",
-        type: "retry",
-        summary: "A syntactically valid numeric lookup returns no rows.",
-        log: "[TOOL_REQUEST]\ntool=read_records\nfilter=\"CustomerId eq 3398\"\n\n[DAB_CALL]\ndurationMs=22\nresultBytes=9\nrows=0",
-        does: "The token suffix is not the real CustomerId. The empty result shows why token resolution must happen at the secure boundary, not by guessing ids.",
-        next: "Use the protected customer token against token-resolvable sensitive fields."
-      },
-      {
-        name: "Token Boundary",
-        category: "PII guardrail",
-        type: "safe",
-        summary: "The secure boundary resolves protected tokens for the tool call.",
-        log: "[TOOL_SECURE_BOUNDARY]\nrequestId=cd16d882\ntool=read_records\nresolvedTokens=2",
-        does: "Before DAB execution, the application resolves allowed protected tokens back to concrete values only inside the tool boundary.",
-        next: "Resolved read filter:\nFullName eq 'Ethan Thomas' or Email eq 'Ethan Thomas'"
-      },
-      {
-        name: "Correct Read",
-        category: "MCP / DAB / SQL",
-        type: "data",
-        summary: "The corrected read finds the customer.",
-        log: "[DAB_CALL]\ntool=read_records\ndurationMs=165\nresultBytes=569\n\n[TOOL_RESULT_PROTECTION]\nprotectedEntities=3\nprotectedResultBytes=382\nnewTokens=3",
-        does: "DAB returns the customer row. The result is immediately protected so the model continuation sees tokens for name, email, and phone.",
-        next: "Protected row:\nCustomerId=11\nFullName=CU_3398e6\nEmail=EM_67fb0b\nPhone=PH_d9e0ff\nCity=Portland\nStateProvince=Oregon\nCountry=United States\nCreatedDate=2025-03-01\nLoyaltyTier=Gold"
-      },
-      {
-        name: "Profile Read",
-        category: "MCP / DAB / SQL",
-        type: "data",
-        summary: "A second read fetches profile fields by stable CustomerId.",
-        log: "[TOOL_REQUEST]\ntool=read_records\nfilter=\"CustomerId eq 11\"\nselect=CustomerId,FullName,City,StateProvince,Country,LoyaltyTier,CreatedDate",
-        does: "Once the real CustomerId is known, the follow-up read can use a stable non-sensitive identifier.",
-        next: "Protected profile data returns to the model for final answer composition."
-      },
-      {
-        name: "MODEL_RESPONSE",
-        category: "Model loop",
-        type: "model",
-        summary: "The model produces a structured answer using protected data.",
-        log: "[MODEL_RESPONSE]\nrequestId=cd16d882\nmodel=minimax/minimax-m3:free\ndurationMs=55301\npromptTokens=39989\ncompletionTokens=832\ntotalTokens=40821",
-        does: "The LLM writes the answer and rows using the protected values it received from the guarded tool pipeline.",
-        next: "Structured JSON response is parsed by the application."
-      },
-      {
-        name: "STRUCTURED_OUTPUT",
-        category: "Spring orchestration",
+        name: "Approved MCP Tool Call",
+        category: "AI Application",
         type: "app",
-        summary: "The response contract is parsed and checked.",
-        log: "[STRUCTURED_OUTPUT]\nrequestId=cd16d882\nparsed=true\nstatus=ANSWER\nrows=1\ndurationMs=0",
-        does: "The coordinator confirms that the model returned the expected answer shape: status, message, columns, rows, warnings, and notes.",
-        next: "Protected response is ready for safe memory write."
+        summary: "The application mediates model tool requests before data access.",
+        input: "Model-generated tool call using protected token:\nread_records(Customer, filter containing CU_3398e6)",
+        does: "The application validates the tool call, securely resolves the protected token immediately before calling DAB, and sends only an approved read operation forward. Retries or corrections can happen within this stage when the model tries an invalid filter, an invalid field selection, or an empty lookup.",
+        output: "DAB receives a real lookup value only after secure resolution:\nFullName = Ethan Thomas\n\nUseful trace detail:\nInitial attempts included CustomerId/token mismatch and an empty CustomerId lookup. The corrected lookup used token-resolvable customer fields."
       },
       {
-        name: "MEMORY_WRITE",
-        category: "Spring orchestration",
+        name: "Microsoft DAB + SQL Server",
+        category: "Data Platform",
+        type: "data",
+        summary: "Data API Builder executes configured read-only access to SQL Server.",
+        input: "Approved DAB read request:\nEntity = Customer\nLookup value = Ethan Thomas\nOperation = read",
+        does: "Microsoft Data API Builder maps the approved entity request to SQL Server under configured permissions. The LLM is not connected to the database; the data platform only sees the resolved lookup from the application boundary.",
+        output: "Raw DB result returned to the application:\nCustomerId = 11\nFullName = Ethan Thomas\nEmail = ...\nPhone = ...\nCity = Portland\nStateProvince = Oregon\nCountry = United States\nCreatedDate = 2025-03-01\nLoyaltyTier = Gold"
+      },
+      {
+        name: "Tool Result PII Protection",
+        category: "AI Application",
         type: "app",
-        summary: "Conversation memory is written in sanitized form.",
-        log: "[MEMORY_WRITE]\nrequestId=cd16d882\nconversationId=37d259af\nsanitized=true\nmessagesWritten=2",
-        does: "The application stores the user/assistant turn after protection so follow-up context remains safe.",
-        next: "After sanitized memory is written, prepare the response for the browser."
+        summary: "Raw database PII is protected before returning to the external model.",
+        input: "Raw DB result:\nFullName = Ethan Thomas\nEmail = ...\nPhone = ...",
+        does: "The application tokenizes sensitive fields from the tool result before the model continuation. This prevents raw DB PII from going back to the external LLM.",
+        output: "Protected result sent to model:\nCustomerId = 11\nFullName = CU_3398e6\nEmail = EM_xxx\nPhone = PH_xxx\nCity = Portland\nStateProvince = Oregon\nCountry = United States\nCreatedDate = 2025-03-01\nLoyaltyTier = Gold"
       },
       {
-        name: "UI Detokenization",
-        category: "PII guardrail",
-        type: "safe",
-        summary: "The final response is detokenized for the browser boundary.",
-        log: "UI handoff rule:\nAlways detokenize the ChatResponse before returning it to the browser.",
-        does: "The model and memory stay protected, but the final UI response is converted back to the values the user is allowed to see.",
-        next: "CustomerNameToken becomes FullName for the browser response."
+        name: "Structured Response + Sanitized Memory",
+        category: "AI Application",
+        type: "app",
+        summary: "The answer is parsed into a predictable contract and stored safely.",
+        input: "Model output using protected values:\nstatus, message, columns, rows, warnings, notes",
+        does: "The coordinator parses the structured response and writes conversation memory only after sanitization. Memory stores protected content, so follow-up questions can use context without persisting raw customer PII.",
+        output: "Structured response contract:\nstatus = ANSWER\nrows = 1\n\nSanitized memory:\nuser message and assistant response are stored with protected values where sensitive data is present."
       },
       {
-        name: "CHAT_RESPONSE",
-        category: "UI / API",
-        type: "ui",
-        summary: "The browser renders the final user-facing answer.",
-        log: "[CHAT_RESPONSE]\nrequestId=cd16d882\nconversationId=37d259af\ncompleted status=ANSWER\ndurationMs=55331",
-        does: "The UI shows Ethan Thomas and the requested non-sensitive profile details instead of exposing internal CU, EM, or PH tokens.",
-        next: "Final UI:\nCustomerId: 11\nFullName: Ethan Thomas\nCity: Portland\nStateProvince: Oregon\nCountry: United States\nCreatedDate: 2025-03-01\nLoyaltyTier: Gold"
+        name: "Final UI Response",
+        category: "User / API",
+        type: "user",
+        summary: "The browser receives a policy-aware response for display.",
+        input: "Structured response from coordinator:\nCustomer details for CU_3398e6 with non-sensitive profile fields.",
+        does: "Sensitive values are restored only when allowed by the response/policy; otherwise they remain tokenized or are omitted. This keeps the UI understandable without weakening the model and memory protection boundaries.",
+        output: "Final UI example:\nCustomerId = 11\nFullName = Ethan Thomas\nCity = Portland\nStateProvince = Oregon\nCountry = United States\nCreatedDate = 2025-03-01\nLoyaltyTier = Gold\n\nEmail and phone may remain tokenized or be omitted unless the response policy allows showing them."
       }
     ];
 
@@ -728,9 +628,9 @@
     const panelTitle = document.getElementById("panelTitle");
     const panelCategory = document.getElementById("panelCategory");
     const panelSummary = document.getElementById("panelSummary");
-    const panelLog = document.getElementById("panelLog");
+    const panelInput = document.getElementById("panelInput");
     const panelDoes = document.getElementById("panelDoes");
-    const panelNext = document.getElementById("panelNext");
+    const panelOutput = document.getElementById("panelOutput");
     const progressBar = document.getElementById("progressBar");
     const prevBtn = document.getElementById("prevBtn");
     const nextBtn = document.getElementById("nextBtn");
@@ -774,9 +674,9 @@
       panelTitle.textContent = stage.name;
       panelCategory.textContent = stage.category;
       panelSummary.textContent = stage.summary;
-      panelLog.textContent = stage.log;
+      panelInput.textContent = stage.input;
       panelDoes.textContent = stage.does;
-      panelNext.textContent = stage.next;
+      panelOutput.textContent = stage.output;
       progressBar.style.width = `${((activeIndex + 1) / stages.length) * 100}%`;
 
       prevBtn.disabled = activeIndex === 0;
@@ -823,7 +723,7 @@
       if (activeIndex === stages.length - 1) {
         setActive(0);
       }
-      timer = setInterval(nextStep, 1900);
+      timer = setInterval(nextStep, 2100);
     });
 
     renderFlow();
