@@ -2,61 +2,117 @@
 
 ## Executive summary
 
-This proof of concept (POC) allows business users to ask natural-language questions about SQL Server data and receive clear, structured answers. It is designed to demonstrate a controlled AI-to-enterprise-data pattern rather than unrestricted database access.
+This proof of concept (POC) lets business users ask natural-language questions about SQL Server data through an existing chat interface. A single Spring Boot coordinator applies system instructions, sanitized conversation context, PII safeguards, and structured-response handling. The LLM interprets the request but never connects directly to the database: approved Microsoft Data API Builder (DAB) MCP tools mediate access, mutation tools are disabled, and SQL Server access is read-only. Authentication and enterprise authorization are future production capabilities, not features of the current POC.
 
-The large language model (LLM) does **not** connect directly to SQL Server. The Spring Boot application gives the model access only to approved Microsoft Data API Builder (DAB) tools through the Model Context Protocol (MCP). Those tools expose read operations, while DAB configuration and SQL Server permissions provide additional read-only enforcement.
-
-Personally identifiable information (PII) protection is a first-class design concern. User input, database tool results, model output, and conversation memory pass through application-level safeguards. The final result uses a stable structured-response contract so the existing Chat UI can consistently render summaries, tables, status, limitations, and follow-up questions.
-
-## Business value
-
-- Faster access to database insights through plain-language questions
-- Reduced dependency on predefined reports for exploratory business questions
-- A safer AI-to-data integration pattern with mediated, read-only access
-- A reusable architecture for future enterprise AI assistants
-- A foundation for future governance, evaluation, authentication, and authorization
-
-## High-level architecture
+## Architecture at a glance
 
 ```mermaid
-flowchart LR
-    User[User] --> UI[Chat UI]
-
-    subgraph App[Spring Boot AI Application]
-        UI --> Controller[ChatController]
-        Controller --> Coordinator[ChatCoordinator]
-        Coordinator --> Guard[PII Guardrail<br/>SensitiveDataGuard]
-        Coordinator --> Prompt[System Prompt<br/>PromptProvider]
-        Coordinator <--> Memory[Sanitized Conversation Memory]
-        Coordinator --> Runner[ChatModelRunner]
-        Guard --> Runner
-        Prompt --> Runner
-        Runner --> Client[Spring AI ChatClient]
-        Runner --> Response[Structured Response]
-        Response --> Controller
+flowchart TB
+    subgraph ACCESS["User Access"]
+        direction LR
+        USER([Business User]) --> UI["User Interface<br/>(Chat)"]
+        UI -. "Future production" .-> AUTH["Authentication / OIDC<br/>(Not in current POC)"]
     end
 
-    Client --> LLM[OpenRouter LLM<br/>Primary / Fallback]
-    LLM --> Tools[DAB MCP Tools<br/>Describe / Read / Aggregate]
-    Tools --> Guard
-    Tools --> DAB[Microsoft Data API Builder]
-    DAB -->|Read-only access| SQL[(SQL Server)]
-    Controller --> UI
-    UI --> User
+    UI --> API["API / ChatController"]
+
+    subgraph INTELLIGENCE[" "]
+        direction LR
+
+        subgraph RUNTIME["Spring Boot AI Application / Agent Runtime"]
+            direction LR
+
+            subgraph CORE["Single Lightweight Coordinator"]
+                direction TB
+                COORD[ChatCoordinator]
+                PROMPT["PromptProvider<br/>Strong System Instructions"]
+                RUNNER[ChatModelRunner]
+                CLIENT[Spring AI ChatClient]
+
+                COORD --> PROMPT --> RUNNER --> CLIENT
+            end
+
+            subgraph CONTROLS["Guardrails, Context & Output"]
+                direction TB
+                PII["SensitiveDataGuard<br/>Input / Output / Tool Results"]
+                MEMORY["Sanitized<br/>Conversation Memory"]
+                RESPONSE["Structured Response<br/>Summary / Table / Status"]
+            end
+
+            COORD --> PII --> RUNNER
+            COORD <--> MEMORY
+            RUNNER --> RESPONSE
+        end
+
+        LLM["OpenRouter LLM<br/>Primary / Fallback"]
+    end
+
+    API --> COORD
+    CLIENT <--> LLM
+    RESPONSE --> API
+
+    subgraph DATA["Controlled Data Access"]
+        direction TB
+
+        subgraph TOOLS["DAB MCP Tools — Approved Read Operations"]
+            direction LR
+            DESCRIBE[describe_entities]
+            READ[read_records]
+            AGGREGATE[aggregate_records]
+        end
+
+        DAB[Microsoft Data API Builder]
+        SQL[("SQL Server<br/>Read-only Access")]
+
+        DESCRIBE --> DAB
+        READ --> DAB
+        AGGREGATE --> DAB
+        DAB --> SQL
+    end
+
+    CLIENT -->|Guarded tool callbacks| DESCRIBE
+    CLIENT -->|Guarded tool callbacks| READ
+    CLIENT -->|Guarded tool callbacks| AGGREGATE
+    DAB -. "Tool results protected before model use" .-> PII
+
+    classDef ui fill:#dbeafe,stroke:#60a5fa,color:#0f172a,stroke-width:2px;
+    classDef future fill:#eff6ff,stroke:#60a5fa,color:#475569,stroke-width:2px,stroke-dasharray:6 4;
+    classDef runtime fill:#dcfce7,stroke:#16a34a,color:#052e16,stroke-width:2px;
+    classDef llm fill:#fef3c7,stroke:#eab308,color:#422006,stroke-width:2px;
+    classDef security fill:#f3e8ff,stroke:#a855f7,color:#3b0764,stroke-width:2px;
+    classDef support fill:#fff7ed,stroke:#f97316,color:#431407,stroke-width:2px;
+    classDef data fill:#ecfdf5,stroke:#10b981,color:#022c22,stroke-width:2px;
+
+    class USER,UI,API ui;
+    class AUTH future;
+    class COORD,PROMPT,RUNNER,CLIENT runtime;
+    class LLM llm;
+    class PII security;
+    class MEMORY,RESPONSE support;
+    class DESCRIBE,READ,AGGREGATE,DAB,SQL data;
+
+    style ACCESS fill:#f8fbff,stroke:#bfdbfe,stroke-width:1px
+    style INTELLIGENCE fill:none,stroke:none
+    style RUNTIME fill:#f7fff9,stroke:#10b981,stroke-width:2px,stroke-dasharray:8 5
+    style CORE fill:#f0fdf4,stroke:#86efac,stroke-width:1px
+    style CONTROLS fill:#fffaf5,stroke:#fdba74,stroke-width:1px
+    style DATA fill:#f8fafc,stroke:#94a3b8,stroke-width:2px
+    style TOOLS fill:#f0fdf4,stroke:#6ee7b7,stroke-width:1px
 ```
 
-The application is the control point between the user, the model, and enterprise data. It prepares the request, applies safeguards, supplies approved tools, validates the model response, and returns a UI-ready result.
+The dotted boundary is the current **single-coordinator Spring Boot runtime**. It is not a multi-agent design. The yellow LLM is external to that runtime, and the lower layer is the only route to SQL Server data.
 
-## Runtime sequence
+## Runtime flow
 
 ```mermaid
 sequenceDiagram
     actor User
     participant UI as Chat UI
-    participant Controller as ChatController
+    participant API as ChatController
     participant Coordinator as ChatCoordinator
     participant Guard as SensitiveDataGuard
-    participant Prompt as PromptProvider / Memory
+    participant Prompt as PromptProvider
+    participant Runner as ChatModelRunner
     participant Client as Spring AI ChatClient
     participant LLM as OpenRouter LLM
     participant MCP as DAB MCP Tools
@@ -64,128 +120,75 @@ sequenceDiagram
     participant SQL as SQL Server
 
     User->>UI: Ask a natural-language question
-    UI->>Controller: Send message and optional conversation ID
-    Controller->>Controller: Validate request and provided conversation ID
-    Controller->>Coordinator: Start chat turn
-    Coordinator->>Coordinator: Resolve existing or create conversation ID
+    UI->>API: Send message and optional conversation ID
+    API->>API: Validate request
+    API->>Coordinator: Start chat turn
+    Coordinator->>Coordinator: Resolve or create conversation ID
     Coordinator->>Guard: Protect sensitive input
-    Guard-->>Coordinator: Return protected message
-    Coordinator->>Prompt: Load system instructions and sanitized history
-    Prompt-->>Coordinator: Return prompt and conversation context
-    Coordinator->>Client: Submit protected request, context, and guarded tools
-    Client->>LLM: Request an answer
-    LLM->>MCP: Request an approved data tool
-    MCP->>DAB: Describe, read, or aggregate data
-    DAB->>SQL: Execute with read-only access
-    SQL-->>DAB: Return query result
-    DAB-->>MCP: Return tool result
-    MCP->>Guard: Protect sensitive tool result
-    Guard-->>LLM: Return protected result
-    LLM-->>Client: Return structured answer
-    Client->>Guard: Apply final output protection
-    Guard-->>Coordinator: Return protected structured content
+    Guard-->>Coordinator: Protected message
+    Coordinator->>Prompt: Get system instructions
+    Coordinator->>Coordinator: Apply sanitized conversation context
+    Coordinator->>Runner: Run protected request
+    Runner->>Client: Supply prompt, memory, and guarded tools
+    Client->>LLM: Request interpretation and answer
+    LLM-->>Client: Request an approved MCP tool
+    Client->>MCP: Invoke describe, read, or aggregate
+    MCP->>DAB: Execute approved operation
+    DAB->>SQL: Read data
+    SQL-->>DAB: Query result
+    DAB-->>MCP: Raw tool result
+    MCP->>Guard: Protect sensitive result fields
+    Guard-->>Client: Protected tool result
+    Client->>LLM: Continue with protected data
+    LLM-->>Client: Structured model content
+    Client-->>Runner: Model response
+    Runner->>Guard: Apply final output protection
+    Guard-->>Coordinator: Protected structured content
     Coordinator->>Coordinator: Store sanitized turn in memory
-    Coordinator-->>Controller: Return structured response
-    Controller-->>UI: Stream progress and renderable result
-    UI-->>User: Show summary, table, notes, or clarification
+    Coordinator-->>API: Structured response
+    API-->>UI: Stream UI-ready result
+    UI-->>User: Show summary, table, or clarification
 ```
 
-If the primary OpenRouter model call fails, the model runner can use the configured fallback model. This availability behavior does not change the data-access or PII controls.
+## Safety controls
 
-## Safety and governance controls
-
-The POC uses defense in depth: prompting guides model behavior, while application guardrails, DAB configuration, and SQL Server permissions enforce the important data boundaries. **Prompting is not the only security control and must not be treated as one.**
-
-| Control | How it works in this POC |
-|---|---|
-| PII masking and redaction | Recognizable PII in user input is protected before it reaches the model. Configured sensitive database fields are replaced with stable pseudonymous tokens, and final output is checked again for email addresses and phone numbers. |
-| Tool result protection | MCP callbacks are wrapped by `SensitiveDataGuard`. Database results are inspected and tokenized before they are returned to the model; an unparseable result is withheld rather than passed through unchecked. |
-| Sanitized conversation memory | Only protected user input and protected structured responses are added to the bounded, in-memory conversation window. Raw tool results and request-scoped token maps are not stored as conversation history. |
-| Read-only database access | DAB exposes describe, read, and aggregate tools; create, update, delete, and execute operations are disabled. Entity permissions allow reads, and the repository setup assigns the DAB database identity to SQL Server's `db_datareader` role. |
-| Strong system prompt | The system instructions require tool-grounded database facts, exact schema field names, minimal data selection, read-only behavior, and clear handling of empty, partial, ambiguous, or failed requests. |
-| Hallucination prevention | The model is instructed to use DAB tools as the source of truth, re-query for factual follow-ups, and return a clarification or error when a grounded answer is not possible. These measures reduce—not eliminate—model error risk. |
-| Prompt-injection resistance | User text and database strings are treated as untrusted data. The system prompt rejects requests to override safeguards, and the application limits the model to guarded, approved tool callbacks. |
-| Structured output | Model output is converted into a typed response with status, summary, columns, rows, completeness notes, and an optional follow-up question. Parsing failures become a controlled error response. |
-| No direct LLM-to-database connection | OpenRouter receives the protected conversation and can request only the guarded tools supplied by the Spring application. Microsoft DAB, not the LLM, holds the SQL Server connection. |
-| Operational limits | Tool-call limits, request timeouts, disabled parallel tool calls, primary/fallback policy, and non-logging of prompts and completions constrain execution and reduce accidental exposure. |
-
-These controls are appropriate for demonstrating the pattern, but production deployment would still require identity, authorization, audit, monitoring, threat testing, and formal governance.
+- The LLM does not directly access SQL Server.
+- DAB MCP exposes only approved describe, read, and aggregate tools; mutation tools are disabled.
+- SQL Server access uses a dedicated read-only database role.
+- PII is protected in user input, model output, and database tool results.
+- Conversation memory stores only sanitized context and remains in memory for the POC.
+- A strong system prompt reinforces read-only behavior, schema grounding, prompt-injection resistance, and hallucination prevention.
+- A typed structured response makes UI rendering predictable and turns parsing failures into controlled errors.
+- Prompting is not the sole security control: application guardrails, DAB configuration, and SQL Server permissions enforce the key boundaries.
 
 ## Component responsibilities
 
-| Component | Responsibility | Notes |
-|---|---|---|
-| Chat UI | Captures user questions and renders progress and results | Displays summaries, tables, notes, status, and follow-up questions from the structured response. |
-| ChatController | Provides chat, streaming, tool-listing, and memory-clear endpoints | Validates requests and conversation ID format, then delegates business flow. |
-| ChatCoordinator | Orchestrates each chat turn | Resolves the conversation ID and coordinates privacy, prompt, memory, tools, model execution, and response assembly. |
-| PromptProvider | Supplies system instructions | Loads the SQL-assistant prompt and applies the current date and application time zone. |
-| ChatModelRunner | Applies model invocation and response-conversion policy | Calls the primary model, optionally falls back, supplies guarded tools, parses structured output, and applies final output protection. |
-| SensitiveDataGuard | Protects sensitive data at trust boundaries | Protects user input, wraps tool callbacks, tokenizes configured sensitive fields, protects final output, and avoids logging raw tool arguments. |
-| Spring AI ChatClient | Provides the application-to-model integration | Sends prompts, history, model options, and guarded tool definitions through the OpenAI-compatible interface. |
-| OpenRouter LLM | Interprets the question and plans tool use | Uses the configured primary or fallback model; it has no direct database connection. |
-| DAB MCP Tools | Offer the model a constrained data capability | The approved POC tools describe entities, read records, and calculate aggregates. |
-| Microsoft DAB | Mediates access to exposed data entities | Hosts MCP, maps approved operations to SQL Server, and disables mutation tools in the POC configuration. |
-| SQL Server | Stores the source business data | Access should use the repository's dedicated reader identity and read-only role. |
-| Structured Response | Defines the stable application-to-UI contract | Includes conversation and model metadata, status, message, columns, rows, data notes, and follow-up information. |
-| Conversation Memory | Supports follow-up questions within a session | Bounded, in-memory, and populated only with sanitized turns; it is not persistent and is not a source of truth for current database facts. |
+| Component | Responsibility |
+|---|---|
+| Chat UI | Collects questions and renders streamed, structured results. |
+| ChatController | Validates API requests and delegates chat turns. |
+| ChatCoordinator | Coordinates one request across privacy, prompt, memory, tools, model, and response handling. |
+| PromptProvider | Supplies strong system instructions and request-time date context. |
+| SensitiveDataGuard | Protects PII in input, tool results, logs, and final output. |
+| ChatModelRunner | Applies primary/fallback model policy and converts model output to the response contract. |
+| Spring AI ChatClient | Connects the application to OpenRouter and guarded MCP tool callbacks. |
+| OpenRouter LLM | Interprets questions and requests tools; it has no direct database connection. |
+| Sanitized Conversation Memory | Retains bounded, protected context for simple follow-up questions. |
+| Structured Response | Carries status, summary, tabular data, notes, and follow-up information to the UI. |
+| DAB MCP Tools | Provide approved schema discovery, record reading, and aggregation operations. |
+| Microsoft DAB | Mediates the configured entities and read-only operations. |
+| SQL Server | Stores source data and enforces read-only access for the DAB identity. |
 
-## Current POC scope
+## Current scope and future scope
 
-- Natural-language questions about the configured SQL Server data
-- Simple list and lookup queries
-- Counts, sums, averages, minima, maxima, and other supported aggregations
-- Follow-up questions using bounded conversation context
-- PII-safe input, tool results, memory, and output handling
-- Read-only access through approved MCP tools
-- Structured responses for consistent UI rendering
-- Primary and fallback OpenRouter model execution
-
-## Out of scope for the current POC
-
-- Retrieval-augmented generation (RAG) or vector search over the database schema
-- Multi-agent orchestration
-- Database write operations
-- Production authentication and authorization
-- A full AI evaluation framework
-- Persistent conversation memory
-- Production-grade observability, alerting, and audit operations
-
-## Future roadmap
-
-### Phase 1: Stabilize the current POC
-
-- Improve model and provider reliability
-- Tune prompts using representative business questions
-- Strengthen schema field-name grounding
-- Expand PII guardrail test coverage
-- Improve structured-output reliability across supported models
-
-### Phase 2: Production hardening
-
-- Add OpenID Connect (OIDC) authentication
-- Add role-based authorization for users and data domains
-- Add stronger, privacy-aware audit logging
-- Add persistent sanitized memory if a validated business need emerges
-- Establish an AI evaluation and regression test suite
-
-### Phase 3: Scale and advanced features
-
-- Add schema RAG if the number or complexity of schemas grows
-- Introduce multiple agents only if distinct business domains require separate skills or controls
-- Connect additional approved MCP servers
-- Add governed dashboard and report export
+| Current POC | Future / Production |
+|---|---|
+| Natural-language database questions | Production authentication with OIDC |
+| Read-only data access | Role-based authorization (RBAC) |
+| Structured UI response | AI evaluation and regression testing |
+| PII-safe output and protected tool results | Schema RAG if schema size or complexity grows |
+| Simple follow-up context using sanitized memory | Multi-agent orchestration only if distinct business domains require it |
 
 ## How to explain this POC in one minute
 
-This POC demonstrates a controlled way to connect AI with enterprise SQL data. The user asks a business question in natural language. The Spring Boot application applies PII protection, business instructions, conversation context, and structured response handling. The LLM helps interpret the request, but it does not directly access the database. Data access happens only through approved Microsoft DAB MCP tools using read-only SQL Server permissions.
-
-In short, the LLM provides language understanding while the application and data platform retain control over what can be accessed, how sensitive values are handled, and how results are returned.
-
-## Current limitations
-
-- Free OpenRouter models can be slow, unavailable, or rate-limited.
-- Some models may not reliably support structured JSON Schema output; prompt-enforced JSON is available but still depends on model compliance and application parsing.
-- Prompt wording and schema field-name grounding may need tuning as questions and schemas become more complex.
-- Pseudonymization and redaction reduce exposure but do not replace a complete production privacy and security program.
-- Conversation memory is local, bounded, and non-persistent.
-- This is a POC and is not yet a production deployment.
+> This POC demonstrates a controlled way to connect AI with enterprise SQL data. The user asks a natural-language question. The Spring Boot application applies PII protection, strong instructions, conversation context, and structured response handling. The LLM helps interpret the request, but it does not directly access the database. Data access happens only through Microsoft DAB MCP tools using read-only SQL Server access.
