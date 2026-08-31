@@ -10,19 +10,24 @@ This proof of concept (POC) lets business users ask natural-language questions a
 
 The editable source diagram is available at [docs/sql-mcp-poc-architecture.drawio](sql-mcp-poc-architecture.drawio). Open it with [diagrams.net](https://app.diagrams.net) or the draw.io VS Code extension. A vector version is also available at [docs/sql-mcp-poc-architecture.svg](sql-mcp-poc-architecture.svg) for slides and printed handouts.
 
-The dotted green boundary is the current **single-coordinator Spring Boot runtime**. It is not a multi-agent design. The yellow LLM sits outside that boundary, and the teal layer at the bottom is the only route to SQL Server data.
-
 Reading the diagram in one pass:
 
 | Band | What it shows |
 |---|---|
-| Top | The business user, the chat UI, and authentication as a future production capability. |
-| API | The ChatController that validates requests and returns results. |
-| Dotted green box | The Spring Boot agent runtime: coordinator, prompt, model runner, chat client, PII guardrail, sanitized memory, and structured response. |
-| Right | The OpenRouter LLM, external to the runtime and with no database connection. |
-| Bottom | The approved DAB MCP tools, Microsoft Data API Builder, and read-only SQL Server. |
+| User experience | A business user asks questions through the chat UI. Authentication / OIDC is shown as a future production capability, not part of the current POC. |
+| AI application | The Spring Boot AI Application coordinates the request, applies safety and governance controls, and returns a structured response for the UI. |
+| Model | The OpenRouter LLM interprets the request, but it has no direct database access. |
+| Data access | DAB MCP tools expose approved describe, read, and aggregate operations through Microsoft Data API Builder. SQL Server access is read-only. |
 
-## Runtime flow
+## Plain-English capabilities
+
+**PII Guardrail:** Protects sensitive values such as customer names, emails, phone numbers, and references.
+
+**Sanitized Conversation Memory:** Stores only safe chat context so follow-up questions can work without retaining raw sensitive data.
+
+**Structured Response:** Formats the answer predictably for the UI, for example status, message, columns, rows, and notes. It is not a security control by itself.
+
+## Technical appendix: runtime flow
 
 ```mermaid
 sequenceDiagram
@@ -83,25 +88,21 @@ sequenceDiagram
 
 ## Component responsibilities
 
-The diagram uses business-facing labels. This table maps each one to the component that implements it.
+The diagram uses business-facing labels. This table keeps the responsibilities at the same level of detail as the management view.
 
-| Diagram label | Implementation component | Responsibility |
-|---|---|---|
-| Chat UI | Chat UI | Collects questions and renders streamed, structured results. |
-| Chat API | `ChatController` | Validates API requests and delegates chat turns. |
-| Request Coordinator | `ChatCoordinator` | Coordinates one request across privacy, prompt, memory, tools, model, and response handling. |
-| System Instructions | `PromptProvider` | Supplies strong system instructions and request-time date context. |
-| PII Guardrail | `SensitiveDataGuard` | Protects PII in input, tool results, logs, and final output. |
-| Model Execution | `ChatModelRunner` | Applies primary/fallback model policy and converts model output to the response contract. |
-| AI Integration Layer | Spring AI `ChatClient` | Connects the application to OpenRouter and guarded MCP tool callbacks. |
-| OpenRouter LLM | OpenRouter LLM | Interprets questions and requests tools; it has no direct database connection. |
-| Sanitized Conversation Memory | Sanitized conversation memory | Retains bounded, protected context for simple follow-up questions. |
-| Structured Response | Structured response contract | Carries status, summary, tabular data, notes, and follow-up information to the UI. |
-| Schema Discovery | `describe_entities` MCP tool | Describes the entities and fields the assistant is allowed to see. |
-| Record Read | `read_records` MCP tool | Returns filtered records from approved entities. |
-| Aggregation | `aggregate_records` MCP tool | Returns counts and totals without exposing raw rows. |
-| Microsoft Data API Builder | Microsoft DAB | Mediates the configured entities and read-only operations. |
-| SQL Server | SQL Server | Stores source data and enforces read-only access for the DAB identity. |
+| Diagram label | Responsibility |
+|---|---|
+| Business User | Asks natural-language questions about business data. |
+| Chat UI | Collects questions and renders predictable results. |
+| Spring Boot AI Application | Coordinates request handling, safety controls, model interaction, and UI-ready responses. |
+| AI Coordinator | Controls request flow for each chat turn. |
+| Safety & Governance Controls | Applies PII protection, sanitized memory, read-only rules, and strong instructions. |
+| Structured Response | Formats status, message, columns, rows, and notes for the UI. |
+| OpenRouter LLM | Interprets the request and requests approved tools; it has no direct database connection. |
+| DAB MCP Tools | Provides approved describe, read, and aggregate operations. |
+| Microsoft Data API Builder | Mediates the configured entities and permitted data operations. |
+| SQL Server | Stores source data and enforces read-only access. |
+| Authentication / OIDC | Future production capability; not included in the current POC. |
 
 ## Current scope and future scope
 

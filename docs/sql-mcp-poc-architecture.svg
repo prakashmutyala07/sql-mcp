@@ -1,117 +1,95 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="20 0 1450 1450" width="1450" height="1450">
-<rect x="20" y="0" width="1450" height="1450" fill="#ffffff"/>
-<defs>
-<marker id="a37474f" viewBox="0 0 10 10" refX="9.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#37474f"/></marker>
-<marker id="a9e9e9e" viewBox="0 0 10 10" refX="9.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#9e9e9e"/></marker>
-<marker id="a2e7d32" viewBox="0 0 10 10" refX="9.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2e7d32"/></marker>
-<marker id="ad79b00" viewBox="0 0 10 10" refX="9.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#d79b00"/></marker>
-<marker id="a9673a6" viewBox="0 0 10 10" refX="9.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#9673a6"/></marker>
-<marker id="ad6b656" viewBox="0 0 10 10" refX="9.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#d6b656"/></marker>
-<marker id="a0e8088" viewBox="0 0 10 10" refX="9.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#0e8088"/></marker>
-<marker id="a10739e" viewBox="0 0 10 10" refX="9.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#10739e"/></marker>
-</defs>
-<text x="60" y="44" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="24" font-weight="700" fill="#0f172a" text-anchor="start">Read-only SQL MCP AI Assistant — POC Architecture</text>
-<text x="60" y="72" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="14" fill="#475569" text-anchor="start">Single-coordinator Spring Boot runtime  ·  LLM never touches the database  ·  Read-only access mediated by Microsoft Data API Builder</text>
-<rect x="245" y="320" width="760" height="520" rx="6" ry="6" fill="#f7fff9" stroke="#2e7d32" stroke-width="3" stroke-dasharray="8 5"/>
-<text x="261" y="344" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="15" font-weight="700" fill="#1b5e20" text-anchor="start">Spring Boot AI Application / Agent Runtime</text>
-<text x="650" y="344" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="12" fill="#3f7f46" text-anchor="start">— single coordinator, not multi-agent</text>
-<rect x="245" y="900" width="760" height="170" rx="6" ry="6" fill="#f4fbfc" stroke="#0e8088" stroke-width="2"/>
-<text x="261" y="924" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="15" font-weight="700" fill="#0e5c61" text-anchor="start">DAB MCP Tools</text>
-<text x="380" y="924" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="12" fill="#0e8088" text-anchor="start">— approved read operations only, mutation tools disabled</text>
-<rect x="60" y="110" width="190" height="70" rx="8" ry="8" fill="#dae8fc" stroke="#6c8ebf" stroke-width="2"/>
-<text x="155.0" y="132.7" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="14" font-weight="700" fill="#0f172a" text-anchor="middle">Business User</text>
-<text x="155.0" y="150.0" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" fill="#475569" text-anchor="middle">Asks questions in</text>
-<text x="155.0" y="166.0" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" fill="#475569" text-anchor="middle">natural language</text>
-<rect x="300" y="110" width="210" height="70" rx="8" ry="8" fill="#dae8fc" stroke="#6c8ebf" stroke-width="2"/>
-<text x="405.0" y="140.7" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="14" font-weight="700" fill="#0f172a" text-anchor="middle">User Interface</text>
-<text x="405.0" y="158.0" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" fill="#475569" text-anchor="middle">Chat UI</text>
-<rect x="580" y="110" width="250" height="80" rx="8" ry="8" fill="#f5f5f5" stroke="#9e9e9e" stroke-width="2" stroke-dasharray="6 4"/>
-<text x="705.0" y="137.4" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="13" font-weight="700" fill="#616161" text-anchor="middle">Authentication / OIDC</text>
-<text x="705.0" y="154.3" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" fill="#616161" text-anchor="middle">Future production capability</text>
-<text x="705.0" y="170.3" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" fill="#616161" text-anchor="middle">Not in current POC</text>
-<rect x="300" y="230" width="210" height="70" rx="8" ry="8" fill="#dae8fc" stroke="#6c8ebf" stroke-width="2"/>
-<text x="405.0" y="252.7" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="14" font-weight="700" fill="#0f172a" text-anchor="middle">Chat API</text>
-<text x="405.0" y="270.0" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" fill="#475569" text-anchor="middle">Validates requests,</text>
-<text x="405.0" y="286.0" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" fill="#475569" text-anchor="middle">returns results</text>
-<rect x="285" y="360" width="240" height="60" rx="8" ry="8" fill="#d5e8d4" stroke="#82b366" stroke-width="2"/>
-<text x="405.0" y="385.7" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="14" font-weight="700" fill="#0f172a" text-anchor="middle">Request Coordinator</text>
-<text x="405.0" y="403.0" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" fill="#33691e" text-anchor="middle">Orchestrates one chat turn</text>
-<rect x="285" y="460" width="240" height="70" rx="8" ry="8" fill="#d5e8d4" stroke="#82b366" stroke-width="2"/>
-<text x="405.0" y="483.4" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="14" font-weight="700" fill="#0f172a" text-anchor="middle">System Instructions</text>
-<text x="405.0" y="500.8" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" fill="#33691e" text-anchor="middle">Business rules for the assistant</text>
-<text x="405.0" y="515.7" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="10" fill="#33691e" text-anchor="middle">Read-only · schema-grounded · injection-resistant</text>
-<rect x="285" y="580" width="240" height="70" rx="8" ry="8" fill="#d5e8d4" stroke="#82b366" stroke-width="2"/>
-<text x="405.0" y="602.7" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="14" font-weight="700" fill="#0f172a" text-anchor="middle">Model Execution</text>
-<text x="405.0" y="620.0" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" fill="#33691e" text-anchor="middle">Primary / fallback model policy</text>
-<text x="405.0" y="636.0" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" fill="#33691e" text-anchor="middle">Maps output to response contract</text>
-<rect x="285" y="710" width="240" height="60" rx="8" ry="8" fill="#d5e8d4" stroke="#82b366" stroke-width="2"/>
-<text x="405.0" y="735.7" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="14" font-weight="700" fill="#0f172a" text-anchor="middle">AI Integration Layer</text>
-<text x="405.0" y="753.0" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" fill="#33691e" text-anchor="middle">Connects the model and approved tools</text>
-<rect x="635" y="360" width="340" height="60" rx="8" ry="8" fill="#ffe6cc" stroke="#d79b00" stroke-width="2"/>
-<text x="805.0" y="385.7" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="14" font-weight="700" fill="#0f172a" text-anchor="middle">Sanitized Conversation Memory</text>
-<text x="805.0" y="403.0" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" fill="#8a5100" text-anchor="middle">Bounded, protected follow-up context</text>
-<rect x="635" y="470" width="340" height="110" rx="8" ry="8" fill="#e1d5e7" stroke="#9673a6" stroke-width="3"/>
-<text x="805.0" y="507.6" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="14" font-weight="700" fill="#0f172a" text-anchor="middle">PII Guardrail</text>
-<text x="805.0" y="526.0" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="12" fill="#4a148c" text-anchor="middle">PII input / output / tool-result protection</text>
-<text x="805.0" y="551.1" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" fill="#4a148c" text-anchor="middle">User input · Model output · Tool results · Logs</text>
-<rect x="635" y="630" width="340" height="80" rx="8" ry="8" fill="#ffe6cc" stroke="#d79b00" stroke-width="2"/>
-<text x="805.0" y="657.0" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="14" font-weight="700" fill="#0f172a" text-anchor="middle">Structured Response</text>
-<text x="805.0" y="675.3" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="12" fill="#8a5100" text-anchor="middle">Structured response: summary / table / status</text>
-<text x="805.0" y="691.7" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" fill="#8a5100" text-anchor="middle">Predictable UI rendering, controlled errors</text>
-<rect x="1090" y="430" width="260" height="120" rx="8" ry="8" fill="#fff2cc" stroke="#d6b656" stroke-width="3"/>
-<text x="1220.0" y="464.9" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="15" font-weight="700" fill="#0f172a" text-anchor="middle">OpenRouter LLM</text>
-<text x="1220.0" y="483.7" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="12" fill="#7f6000" text-anchor="middle">Primary model / fallback model</text>
-<text x="1220.0" y="508.8" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" fill="#7f6000" text-anchor="middle">Interprets the question and</text>
-<text x="1220.0" y="524.8" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" fill="#7f6000" text-anchor="middle">requests approved tools</text>
-<rect x="1090" y="580" width="260" height="60" rx="0" ry="0" fill="#fdecea" stroke="#c62828" stroke-width="2" stroke-dasharray="4 4"/>
-<text x="1220.0" y="604.0" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="13" font-weight="700" fill="#b71c1c" text-anchor="middle">LLM does not directly</text>
-<text x="1220.0" y="622.8" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="13" font-weight="700" fill="#b71c1c" text-anchor="middle">access SQL Server</text>
-<rect x="285" y="970" width="220" height="60" rx="8" ry="8" fill="#b0e3e6" stroke="#0e8088" stroke-width="2"/>
-<text x="395.0" y="995.7" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="14" font-weight="700" fill="#0f172a" text-anchor="middle">Schema Discovery</text>
-<text x="395.0" y="1013.0" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" fill="#0e5c61" text-anchor="middle">Describes available data entities</text>
-<rect x="535" y="970" width="220" height="60" rx="8" ry="8" fill="#b0e3e6" stroke="#0e8088" stroke-width="2"/>
-<text x="645.0" y="995.7" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="14" font-weight="700" fill="#0f172a" text-anchor="middle">Record Read</text>
-<text x="645.0" y="1013.0" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" fill="#0e5c61" text-anchor="middle">Filtered record reads</text>
-<rect x="785" y="970" width="190" height="60" rx="8" ry="8" fill="#b0e3e6" stroke="#0e8088" stroke-width="2"/>
-<text x="880.0" y="995.7" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="14" font-weight="700" fill="#0f172a" text-anchor="middle">Aggregation</text>
-<text x="880.0" y="1013.0" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" fill="#0e5c61" text-anchor="middle">Counts and totals</text>
-<rect x="465" y="1140" width="320" height="70" rx="8" ry="8" fill="#b0e3e6" stroke="#0e8088" stroke-width="2"/>
-<text x="625.0" y="1163.0" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="15" font-weight="700" fill="#0f172a" text-anchor="middle">Microsoft Data API Builder</text>
-<text x="625.0" y="1180.8" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" fill="#0e5c61" text-anchor="middle">Configured entities and</text>
-<text x="625.0" y="1196.7" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" fill="#0e5c61" text-anchor="middle">permitted operations</text>
-<path d="M 505 1296 L 505 1374 A 120.0 16 0 0 0 745 1374 L 745 1296 Z" fill="#b1ddf0" stroke="#10739e" stroke-width="2"/>
-<ellipse cx="625.0" cy="1296" rx="120.0" ry="16" fill="#b1ddf0" stroke="#10739e" stroke-width="2"/>
-<text x="625.0" y="1336.2" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="15" font-weight="700" fill="#0f172a" text-anchor="middle">SQL Server</text>
-<text x="625.0" y="1355.0" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="12" fill="#0b4f6c" text-anchor="middle">Read-only access</text>
-<rect x="820" y="1290" width="290" height="90" rx="0" ry="0" fill="#e8f5fb" stroke="#10739e" stroke-width="2" stroke-dasharray="4 4"/>
-<text x="965.0" y="1321.0" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="13" font-weight="700" fill="#0b4f6c" text-anchor="middle">Read-only SQL access</text>
-<text x="965.0" y="1338.9" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="12" fill="#0b4f6c" text-anchor="middle">Dedicated read-only database role.</text>
-<text x="965.0" y="1356.3" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="12" fill="#0b4f6c" text-anchor="middle">Mutation tools disabled in DAB.</text>
-<path d="M 250 145 L 300 145" fill="none" stroke="#37474f" stroke-width="2" marker-end="url(#a37474f)"/>
-<path d="M 510 150 L 580 150" fill="none" stroke="#9e9e9e" stroke-width="2" stroke-dasharray="6 4" marker-end="url(#a9e9e9e)"/>
-<text x="545" y="101" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="10" fill="#616161" text-anchor="middle" stroke="#ffffff" stroke-width="5" paint-order="stroke" stroke-linejoin="round">Future production</text>
-<path d="M 405 180 L 405 230" fill="none" stroke="#37474f" stroke-width="2" marker-end="url(#a37474f)"/>
-<path d="M 405 300 L 405 360" fill="none" stroke="#37474f" stroke-width="2" marker-end="url(#a37474f)"/>
-<path d="M 405 420 L 405 460" fill="none" stroke="#2e7d32" stroke-width="2" marker-end="url(#a2e7d32)"/>
-<path d="M 405 530 L 405 580" fill="none" stroke="#2e7d32" stroke-width="2" marker-end="url(#a2e7d32)"/>
-<path d="M 405 650 L 405 710" fill="none" stroke="#2e7d32" stroke-width="2" marker-end="url(#a2e7d32)"/>
-<path d="M 525 390 L 635 390" fill="none" stroke="#d79b00" stroke-width="2" marker-end="url(#ad79b00)" marker-start="url(#ad79b00)"/>
-<text x="580" y="382" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="10" fill="#8a5100" text-anchor="middle" stroke="#ffffff" stroke-width="5" paint-order="stroke" stroke-linejoin="round">Sanitized context</text>
-<path d="M 525 410 L 585 410 L 585 525 L 635 525" fill="none" stroke="#9673a6" stroke-width="2" marker-end="url(#a9673a6)"/>
-<text x="585" y="470" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="10" fill="#6a1b9a" text-anchor="middle" stroke="#ffffff" stroke-width="5" paint-order="stroke" stroke-linejoin="round">Protect input</text>
-<path d="M 635 565 L 550 565 L 550 610 L 525 610" fill="none" stroke="#9673a6" stroke-width="2" marker-end="url(#a9673a6)"/>
-<text x="556" y="590" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="10" fill="#6a1b9a" text-anchor="start" stroke="#ffffff" stroke-width="5" paint-order="stroke" stroke-linejoin="round">Protected content</text>
-<path d="M 525 635 L 585 635 L 585 670 L 635 670" fill="none" stroke="#d79b00" stroke-width="2" marker-end="url(#ad79b00)"/>
-<path d="M 975 670 L 1040 670 L 1040 265 L 510 265" fill="none" stroke="#d79b00" stroke-width="2" marker-end="url(#ad79b00)"/>
-<text x="770" y="257" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" fill="#8a5100" text-anchor="middle" stroke="#ffffff" stroke-width="5" paint-order="stroke" stroke-linejoin="round">UI-ready result</text>
-<path d="M 525 740 L 1070 740 L 1070 480 L 1090 480" fill="none" stroke="#d6b656" stroke-width="2" marker-end="url(#ad6b656)" marker-start="url(#ad6b656)"/>
-<text x="760" y="733" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" fill="#7f6000" text-anchor="middle" stroke="#ffffff" stroke-width="5" paint-order="stroke" stroke-linejoin="round">Instructions, context, approved tools</text>
-<path d="M 405 770 L 405 900" fill="none" stroke="#0e8088" stroke-width="2" marker-end="url(#a0e8088)"/>
-<text x="415" y="872" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" fill="#0e5c61" text-anchor="start" stroke="#ffffff" stroke-width="5" paint-order="stroke" stroke-linejoin="round">Approved tool calls</text>
-<path d="M 625 1070 L 625 1140" fill="none" stroke="#0e8088" stroke-width="2" marker-end="url(#a0e8088)"/>
-<path d="M 625 1210 L 625 1280" fill="none" stroke="#10739e" stroke-width="2" marker-end="url(#a10739e)" marker-start="url(#a10739e)"/>
-<text x="635" y="1248" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" fill="#0b4f6c" text-anchor="start" stroke="#ffffff" stroke-width="5" paint-order="stroke" stroke-linejoin="round">Read-only access</text>
-<path d="M 245 970 L 210 970 L 210 545 L 397 545 A 8 8 0 0 1 413 545 L 635 545" fill="none" stroke="#9673a6" stroke-width="2" stroke-dasharray="6 4" marker-end="url(#a9673a6)"/>
-<text x="213" y="862" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" fill="#6a1b9a" text-anchor="middle" stroke="#ffffff" stroke-width="5" paint-order="stroke" stroke-linejoin="round">Tool results protected</text>
-<text x="213" y="879" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" fill="#6a1b9a" text-anchor="middle" stroke="#ffffff" stroke-width="5" paint-order="stroke" stroke-linejoin="round">before model use</text>
+<svg xmlns="http://www.w3.org/2000/svg" width="1450" height="900" viewBox="0 0 1450 900" role="img" aria-labelledby="title desc">
+  <title id="title">Read-only SQL MCP AI Assistant - POC Architecture</title>
+  <desc id="desc">Management-friendly architecture diagram showing Business User to Chat UI to Spring Boot AI Application to OpenRouter LLM to DAB MCP Tools to Microsoft Data API Builder to SQL Server read-only access.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="10" markerHeight="10" orient="auto-start-reverse">
+      <path d="M 0 0 L 12 6 L 0 12 z" fill="#334155"/>
+    </marker>
+    <marker id="arrow-teal" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="10" markerHeight="10" orient="auto-start-reverse">
+      <path d="M 0 0 L 12 6 L 0 12 z" fill="#0e8088"/>
+    </marker>
+    <marker id="arrow-blue" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="10" markerHeight="10" orient="auto-start-reverse">
+      <path d="M 0 0 L 12 6 L 0 12 z" fill="#10739e"/>
+    </marker>
+    <marker id="arrow-grey" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="10" markerHeight="10" orient="auto-start-reverse">
+      <path d="M 0 0 L 12 6 L 0 12 z" fill="#8a8f98"/>
+    </marker>
+    <style>
+      .title { font: 700 24px Arial, Helvetica, sans-serif; fill: #0f172a; }
+      .subtitle { font: 400 14px Arial, Helvetica, sans-serif; fill: #475569; }
+      .box-title { font: 700 15px Arial, Helvetica, sans-serif; fill: #0f172a; }
+      .box-text { font: 400 12px Arial, Helvetica, sans-serif; fill: #475569; }
+      .green-text { fill: #33691e; }
+      .teal-text { fill: #0e5c61; }
+      .amber-text { fill: #7f6000; }
+      .blue-text { fill: #0b4f6c; }
+      .grey-text { fill: #5b6472; }
+      .red-text { font: 700 13px Arial, Helvetica, sans-serif; fill: #b71c1c; }
+      .flow { fill: none; stroke: #334155; stroke-width: 2; marker-end: url(#arrow); }
+      .flow-teal { fill: none; stroke: #0e8088; stroke-width: 2; marker-end: url(#arrow-teal); }
+      .flow-blue { fill: none; stroke: #10739e; stroke-width: 2; marker-end: url(#arrow-blue); }
+      .flow-grey { fill: none; stroke: #8a8f98; stroke-width: 2; stroke-dasharray: 7 5; marker-end: url(#arrow-grey); }
+    </style>
+  </defs>
+
+  <rect width="1450" height="900" fill="#ffffff"/>
+  <text x="60" y="48" class="title">Read-only SQL MCP AI Assistant - POC Architecture</text>
+  <text x="60" y="82" class="subtitle">Management view: natural-language questions, controlled AI orchestration, approved read-only data access</text>
+
+  <rect x="70" y="365" width="150" height="70" rx="8" fill="#e8f1ff" stroke="#5b7cba" stroke-width="2"/>
+  <text x="145" y="405" text-anchor="middle" class="box-title">Business User</text>
+
+  <rect x="270" y="365" width="170" height="70" rx="8" fill="#e8f1ff" stroke="#5b7cba" stroke-width="2"/>
+  <text x="355" y="394" text-anchor="middle" class="box-title">Chat UI</text>
+  <text x="355" y="415" text-anchor="middle" class="box-text">Natural language Q&amp;A</text>
+
+  <rect x="250" y="230" width="210" height="86" rx="8" fill="#f3f4f6" stroke="#8a8f98" stroke-width="2" stroke-dasharray="7 5"/>
+  <text x="355" y="258" text-anchor="middle" class="box-title grey-text">Authentication / OIDC</text>
+  <text x="355" y="282" text-anchor="middle" class="box-text grey-text">Future production capability</text>
+  <text x="355" y="302" text-anchor="middle" class="box-text grey-text">Not in current POC</text>
+
+  <rect x="500" y="250" width="350" height="300" rx="8" fill="#f4fbf6" stroke="#2e7d32" stroke-width="3"/>
+  <text x="520" y="280" class="box-title green-text">Spring Boot AI Application</text>
+  <rect x="535" y="305" width="280" height="58" rx="8" fill="#d9ead3" stroke="#82b366" stroke-width="2"/>
+  <text x="675" y="329" text-anchor="middle" class="box-title">AI Coordinator</text>
+  <text x="675" y="350" text-anchor="middle" class="box-text green-text">Controls request flow</text>
+  <rect x="535" y="385" width="280" height="74" rx="8" fill="#d9ead3" stroke="#82b366" stroke-width="2"/>
+  <text x="675" y="410" text-anchor="middle" class="box-title">Safety &amp; Governance Controls</text>
+  <text x="675" y="431" text-anchor="middle" class="box-text green-text">PII guardrail · sanitized memory</text>
+  <text x="675" y="450" text-anchor="middle" class="box-text green-text">read-only rules · strong instructions</text>
+  <rect x="535" y="480" width="280" height="58" rx="8" fill="#d9ead3" stroke="#82b366" stroke-width="2"/>
+  <text x="675" y="504" text-anchor="middle" class="box-title">Structured Response</text>
+  <text x="675" y="525" text-anchor="middle" class="box-text green-text">Summary · table · status · notes</text>
+
+  <rect x="910" y="365" width="180" height="80" rx="8" fill="#fff2cc" stroke="#d6b656" stroke-width="2"/>
+  <text x="1000" y="394" text-anchor="middle" class="box-title">OpenRouter LLM</text>
+  <text x="1000" y="416" text-anchor="middle" class="box-text amber-text">Interprets request</text>
+  <text x="1000" y="435" text-anchor="middle" class="box-text amber-text">No direct DB access</text>
+
+  <rect x="900" y="485" width="200" height="58" fill="#fdecea" stroke="#c62828" stroke-width="2" stroke-dasharray="4 4"/>
+  <text x="1000" y="509" text-anchor="middle" class="red-text">LLM has no direct</text>
+  <text x="1000" y="528" text-anchor="middle" class="red-text">database access</text>
+
+  <rect x="1150" y="365" width="190" height="80" rx="8" fill="#d5f0f3" stroke="#0e8088" stroke-width="2"/>
+  <text x="1245" y="394" text-anchor="middle" class="box-title">DAB MCP Tools</text>
+  <text x="1245" y="416" text-anchor="middle" class="box-text teal-text">describe · read · aggregate</text>
+
+  <rect x="780" y="650" width="230" height="80" rx="8" fill="#d5f0f3" stroke="#0e8088" stroke-width="2"/>
+  <text x="895" y="682" text-anchor="middle" class="box-title">Microsoft Data API Builder</text>
+  <text x="895" y="706" text-anchor="middle" class="box-text teal-text">Controlled data API</text>
+
+  <path d="M 560 655 C 560 628, 750 628, 750 655 L 750 725 C 750 752, 560 752, 560 725 Z" fill="#cfe8f6" stroke="#10739e" stroke-width="2"/>
+  <ellipse cx="655" cy="655" rx="95" ry="20" fill="#e8f5fb" stroke="#10739e" stroke-width="2"/>
+  <text x="655" y="686" text-anchor="middle" class="box-title">SQL Server</text>
+  <text x="655" y="710" text-anchor="middle" class="box-text blue-text">Read-only access</text>
+
+  <path d="M 220 400 L 260 400" class="flow"/>
+  <path d="M 440 400 L 490 400" class="flow"/>
+  <path d="M 850 400 L 900 400" class="flow"/>
+  <path d="M 1090 405 L 1140 405" class="flow"/>
+  <path d="M 1245 445 L 1245 610 L 895 610 L 895 640" class="flow-teal"/>
+  <path d="M 780 690 L 760 690" class="flow-blue"/>
+  <text x="769" y="674" text-anchor="end" class="box-text blue-text">Read-only</text>
+  <path d="M 355 316 L 355 355" class="flow-grey"/>
+  <text x="374" y="345" class="box-text grey-text">Future production</text>
 </svg>
