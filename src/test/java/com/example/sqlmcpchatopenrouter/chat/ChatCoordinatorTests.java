@@ -35,7 +35,7 @@ class ChatCoordinatorTests {
     private static final String NAME = "Jane Doe";
 
     @Test
-    void rawInputAndModelOutputNeverReachFinalResponseOrMemoryInNormalMode() {
+    void rawInputAndModelOutputNeverReachModelOrMemoryInNormalMode() {
         AtomicReference<Prompt> receivedPrompt = new AtomicReference<>();
         ChatModel model = prompt -> {
             receivedPrompt.set(prompt);
@@ -50,9 +50,8 @@ class ChatCoordinatorTests {
         ChatResponse result = fixture.coordinator().chat(
                 "Find jane.doe@example.com or call 415-555-0101", "privacy-test");
 
-        assertThat(result.toString()).doesNotContain(EMAIL, PHONE);
-        assertThat(result.message()).containsPattern("EM_[0-9a-f]{6}").containsPattern("PH_[0-9a-f]{6}");
-        assertThat(result.rows().getFirst().get(1)).matches("EM_[0-9a-f]{6}");
+        assertThat(result.message()).contains(EMAIL, PHONE);
+        assertThat(result.rows().getFirst().get(1)).isEqualTo(EMAIL);
         assertThat(receivedPrompt.get().getContents()).doesNotContain(EMAIL, PHONE);
         assertThat(fixture.memory().get("privacy-test"))
                 .extracting(message -> message.getText())
@@ -60,7 +59,7 @@ class ChatCoordinatorTests {
     }
 
     @Test
-    void localSensitiveModeRevealsUiResponseButKeepsMemorySanitized() {
+    void uiResponseRevealsSensitiveValuesButKeepsMemorySanitized() {
         ChatModel model = prompt -> {
             String nameToken = prompt.getContents().replaceAll("(?s).*?(CU_[0-9a-f]{6}).*", "$1");
             String emailToken = prompt.getContents().replaceAll("(?s).*?(EM_[0-9a-f]{6}).*", "$1");
@@ -70,7 +69,7 @@ class ChatCoordinatorTests {
                     "partialResults":false,"dataNotes":"Sensitive fields are tokenized.","followUpQuestion":""}
                     """.formatted(nameToken, nameToken, emailToken));
         };
-        Fixture fixture = fixture(model, true);
+        Fixture fixture = fixture(model, false);
 
         ChatResponse result = fixture.coordinator().chat(
                 "Find customer named Jane Doe with jane.doe@example.com", "local-display-test");

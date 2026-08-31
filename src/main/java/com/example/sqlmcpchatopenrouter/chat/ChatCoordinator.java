@@ -97,8 +97,7 @@ public class ChatCoordinator implements ChatOperations {
                         + "sanitizedAssistantMemory={}", requestId, response, protectedMessage,
                         memoryContent(response));
             }
-            ChatResponse uiResponse = this.sensitiveLoggingPolicy.sensitiveLoggingEnabled()
-                    ? revealForTrustedLocalDisplay(response, guardSession) : response;
+            ChatResponse uiResponse = revealForTrustedLocalDisplay(response, guardSession);
             logger.info("[CHAT_RESPONSE] requestId={} conversationId={} completed status={} durationMs={}",
                     requestId, resolvedConversationId, uiResponse.status(), elapsedMillis(requestStartedAt));
             if (this.sensitiveLoggingPolicy.sensitiveLoggingEnabled()) {
