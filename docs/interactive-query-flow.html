@@ -453,7 +453,7 @@
     <header>
       <div>
         <h1>Interactive Query Flow</h1>
-        <p class="subtitle">A concise architecture walkthrough for the POC: a natural-language customer question moves through the chat API, PII protection, Spring AI orchestration, approved MCP tooling, Microsoft Data API Builder, SQL Server, sanitized memory, and a policy-aware final UI response.</p>
+        <p class="subtitle">A concise architecture walkthrough for the POC: a natural-language customer question moves through the chat API, request-local PII protection, Spring AI orchestration, a secure MCP tool boundary, Microsoft Data API Builder, SQL Server, sanitized memory, and a policy-aware final UI response.</p>
       </div>
       <section class="query-card" aria-label="Example query">
         <p class="eyebrow">Example request</p>
@@ -525,7 +525,7 @@
       </article>
       <article class="note-card">
         <h3>External Model Boundary</h3>
-        <p>The external LLM receives protected customer tokens rather than raw name, email, or phone values.</p>
+        <p>The OpenAI API receives protected customer tokens rather than raw name, email, or phone values.</p>
       </article>
       <article class="note-card">
         <h3>Governed Data Access</h3>
@@ -553,10 +553,10 @@
         name: "API / Chat Coordinator",
         category: "AI Application",
         type: "app",
-        summary: "The application creates one traceable request lifecycle.",
+        summary: "The application creates one governed request lifecycle.",
         input: "Incoming request:\nmessage = \"give me the details of customer Ethan Thomas\"\nconversationId = active chat session",
-        does: "The chat API forwards the turn to the coordinator. The coordinator attaches a request id, applies guardrails in order, loads safe conversation context, invokes the model runner, writes sanitized memory, and returns a structured response to the UI.",
-        output: "Useful trace detail:\nrequestId = cd16d882\ninputChars = 44\n\nNext handoff:\nSend the raw input to the PII protection layer."
+        does: "The chat API forwards the turn to the coordinator. The coordinator attaches a request id, creates a request-local SensitiveRequestContext, applies guardrails in order, loads safe conversation context, invokes the model runner, writes sanitized memory, and returns a structured response to the UI.",
+        output: "Request context:\nrequestId = cd16d882\ninputChars = 44\nSensitiveRequestContext = created for this chat turn\n\nNext handoff:\nSend the raw input to the PII protection layer."
       },
       {
         name: "PII Protection",
@@ -564,26 +564,26 @@
         type: "app",
         summary: "Sensitive input is tokenized before it reaches the external model.",
         input: "Raw:\nEthan Thomas\n\nFull message:\ngive me the details of customer Ethan Thomas",
-        does: "The application detects the customer name and replaces it with a stable pseudonym. The model path uses the protected text, while the secure token map remains inside the application boundary.",
-        output: "Protected:\nCU_3398e6\n\nLLM input:\ngive me details of customer CU_3398e6\n\nUseful trace detail:\nentities = 1\ntokenTypes = [CU]"
+        does: "PiiDetector detects supported sensitive input such as email, phone, and configured name patterns. SensitiveTokenStore creates request-local tokens, and SensitiveRequestContext keeps the reversible mapping for this chat turn only. The token map remains inside the application boundary.",
+        output: "Protected:\nCU_3398e6\n\nLLM input:\ngive me details of customer CU_3398e6\n\nRequest-local token context:\nentities = 1\ntokenTypes = [CU]\ntoken map is not sent to the model"
       },
       {
         name: "Spring AI + LLM",
         category: "AI Model",
         type: "model",
-        summary: "Spring AI sends protected context and tool definitions to the LLM.",
+        summary: "Spring AI sends protected context and tool definitions to the OpenAI API.",
         input: "Protected user message:\ngive me details of customer CU_3398e6\n\nAvailable tools:\naggregate_records\ndescribe_entities\nread_records",
-        does: "The model reasons over the protected request and approved tool descriptions. It can plan which tool to call, but it cannot connect directly to SQL Server and does not receive raw customer PII.",
-        output: "Model intent:\nFind the Customer record that corresponds to the protected customer token, then return profile fields in the required structured response format.\n\nUseful trace detail:\nmodel = gpt-4.1-mini\nresponseFormat = PROMPT_JSON"
+        does: "Spring AI ChatClient calls the OpenAI API with the protected request. The primary model is gpt-4.1-mini, with gpt-4.1-nano available as a simple fallback. The model can plan which tool to call, but it cannot connect directly to SQL Server and does not receive raw customer PII.",
+        output: "Model intent:\nFind the Customer record that corresponds to the protected customer token, then return profile fields in the required structured response format.\n\nModel provider:\nprovider = OpenAI API\nmodel = gpt-4.1-mini\nfallback = gpt-4.1-nano\nresponseFormat = PROMPT_JSON"
       },
       {
         name: "Approved MCP Tool Call",
         category: "AI Application",
         type: "app",
-        summary: "The application mediates model tool requests before data access.",
+        summary: "SecureMcpToolCallback mediates model tool requests before data access.",
         input: "Model-generated tool call using protected token:\nread_records(Customer, filter containing CU_3398e6)",
-        does: "The application validates the tool call, securely resolves the protected token immediately before calling DAB, and sends only an approved read operation forward. Retries or corrections can happen within this stage when the model tries an invalid filter, an invalid field selection, or an empty lookup.",
-        output: "DAB receives a real lookup value only after secure resolution:\nFullName = Ethan Thomas\n\nUseful trace detail:\nInitial attempts included CustomerId/token mismatch and an empty CustomerId lookup. The corrected lookup used token-resolvable customer fields."
+        does: "SecureMcpToolCallback receives the model tool arguments, detokenizes only at the secure tool boundary, calls DAB MCP, and prevents the model from directly accessing DAB or SQL Server. Retries or corrections can happen within this stage when the model tries an invalid filter, an invalid field selection, or an empty lookup.",
+        output: "DAB receives a real lookup value only after secure resolution:\nFullName = Ethan Thomas\n\nBoundary detail:\nModel sends a protected token.\nSecureMcpToolCallback resolves it immediately before DAB MCP execution.\nThe model never receives direct DAB or SQL Server access."
       },
       {
         name: "Microsoft DAB + SQL Server",
@@ -600,7 +600,7 @@
         type: "app",
         summary: "Raw database PII is protected before returning to the external model.",
         input: "Raw DB result:\nFullName = Ethan Thomas\nEmail = ...\nPhone = ...",
-        does: "The application tokenizes sensitive fields from the tool result before the model continuation. This prevents raw DB PII from going back to the external LLM.",
+        does: "SensitivePayloadProtector tokenizes sensitive fields from the tool result before the model continuation. This prevents raw DB PII from going back to the OpenAI API.",
         output: "Protected result sent to model:\nCustomerId = 11\nFullName = CU_3398e6\nEmail = EM_xxx\nPhone = PH_xxx\nCity = Portland\nStateProvince = Oregon\nCountry = United States\nCreatedDate = 2025-03-01\nLoyaltyTier = Gold"
       },
       {

@@ -1,95 +1,120 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1450" height="900" viewBox="0 0 1450 900" role="img" aria-labelledby="title desc">
   <title id="title">Read-only SQL MCP AI Assistant - POC Architecture</title>
-  <desc id="desc">Management-friendly architecture diagram showing Business User to Chat UI to Spring Boot AI Application to OpenAI LLM to DAB MCP Tools to Microsoft Data API Builder to SQL Server read-only access.</desc>
+  <desc id="desc">Management architecture showing business user, chat UI, Spring Boot AI application, OpenAI API, secure MCP tool boundary, Data API Builder, and read-only SQL Server access.</desc>
   <defs>
-    <marker id="arrow" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="10" markerHeight="10" orient="auto-start-reverse">
-      <path d="M 0 0 L 12 6 L 0 12 z" fill="#334155"/>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="strokeWidth">
+      <path d="M2,2 L10,6 L2,10 Z" fill="#334155"/>
     </marker>
-    <marker id="arrow-teal" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="10" markerHeight="10" orient="auto-start-reverse">
-      <path d="M 0 0 L 12 6 L 0 12 z" fill="#0e8088"/>
+    <marker id="arrowGreen" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="strokeWidth">
+      <path d="M2,2 L10,6 L2,10 Z" fill="#2e7d32"/>
     </marker>
-    <marker id="arrow-blue" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="10" markerHeight="10" orient="auto-start-reverse">
-      <path d="M 0 0 L 12 6 L 0 12 z" fill="#10739e"/>
+    <marker id="arrowTeal" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="strokeWidth">
+      <path d="M2,2 L10,6 L2,10 Z" fill="#0e8088"/>
     </marker>
-    <marker id="arrow-grey" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="10" markerHeight="10" orient="auto-start-reverse">
-      <path d="M 0 0 L 12 6 L 0 12 z" fill="#8a8f98"/>
+    <marker id="arrowBlue" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="strokeWidth">
+      <path d="M2,2 L10,6 L2,10 Z" fill="#10739e"/>
     </marker>
     <style>
-      .title { font: 700 24px Arial, Helvetica, sans-serif; fill: #0f172a; }
-      .subtitle { font: 400 14px Arial, Helvetica, sans-serif; fill: #475569; }
-      .box-title { font: 700 15px Arial, Helvetica, sans-serif; fill: #0f172a; }
-      .box-text { font: 400 12px Arial, Helvetica, sans-serif; fill: #475569; }
-      .green-text { fill: #33691e; }
-      .teal-text { fill: #0e5c61; }
-      .amber-text { fill: #7f6000; }
-      .blue-text { fill: #0b4f6c; }
-      .grey-text { fill: #5b6472; }
-      .red-text { font: 700 13px Arial, Helvetica, sans-serif; fill: #b71c1c; }
-      .flow { fill: none; stroke: #334155; stroke-width: 2; marker-end: url(#arrow); }
-      .flow-teal { fill: none; stroke: #0e8088; stroke-width: 2; marker-end: url(#arrow-teal); }
-      .flow-blue { fill: none; stroke: #10739e; stroke-width: 2; marker-end: url(#arrow-blue); }
-      .flow-grey { fill: none; stroke: #8a8f98; stroke-width: 2; stroke-dasharray: 7 5; marker-end: url(#arrow-grey); }
+      text { font-family: Arial, Helvetica, sans-serif; fill: #0f172a; }
+      .title { font-size: 24px; font-weight: 700; }
+      .subtitle { font-size: 14px; fill: #475569; }
+      .band { font-size: 13px; font-weight: 700; }
+      .box-title { font-size: 15px; font-weight: 700; }
+      .box-body { font-size: 12px; }
+      .app-title { font-size: 17px; font-weight: 700; fill: #1b5e20; }
+      .small { font-size: 10px; }
+      .future { fill: #5b6472; }
+      .edge { fill: none; stroke: #334155; stroke-width: 2; marker-end: url(#arrow); }
+      .edge-green { fill: none; stroke: #2e7d32; stroke-width: 2; marker-end: url(#arrowGreen); }
+      .edge-teal { fill: none; stroke: #0e8088; stroke-width: 2; marker-end: url(#arrowTeal); }
+      .edge-blue { fill: none; stroke: #10739e; stroke-width: 2; marker-end: url(#arrowBlue); }
     </style>
   </defs>
 
   <rect width="1450" height="900" fill="#ffffff"/>
-  <text x="60" y="48" class="title">Read-only SQL MCP AI Assistant - POC Architecture</text>
-  <text x="60" y="82" class="subtitle">Management view: natural-language questions, controlled AI orchestration, approved read-only data access</text>
+  <text x="60" y="50" class="title">Read-only SQL MCP AI Assistant - POC Architecture</text>
+  <text x="60" y="80" class="subtitle">Management view: natural-language questions, OpenAI model orchestration, secure MCP boundary, approved read-only data access</text>
 
-  <rect x="70" y="365" width="150" height="70" rx="8" fill="#e8f1ff" stroke="#5b7cba" stroke-width="2"/>
-  <text x="145" y="405" text-anchor="middle" class="box-title">Business User</text>
+  <text x="255" y="342" text-anchor="middle" class="band" fill="#3f5f91">User Experience</text>
+  <rect x="70" y="390" width="150" height="70" rx="6" fill="#e8f1ff" stroke="#5b7cba" stroke-width="2"/>
+  <text x="145" y="431" text-anchor="middle" class="box-title">Business User</text>
 
-  <rect x="270" y="365" width="170" height="70" rx="8" fill="#e8f1ff" stroke="#5b7cba" stroke-width="2"/>
-  <text x="355" y="394" text-anchor="middle" class="box-title">Chat UI</text>
-  <text x="355" y="415" text-anchor="middle" class="box-text">Natural language Q&amp;A</text>
+  <rect x="270" y="390" width="170" height="70" rx="6" fill="#e8f1ff" stroke="#5b7cba" stroke-width="2"/>
+  <text x="355" y="419" text-anchor="middle" class="box-title">Chat UI</text>
+  <text x="355" y="441" text-anchor="middle" class="box-body" fill="#475569">Natural language Q&amp;A</text>
 
-  <rect x="250" y="230" width="210" height="86" rx="8" fill="#f3f4f6" stroke="#8a8f98" stroke-width="2" stroke-dasharray="7 5"/>
-  <text x="355" y="258" text-anchor="middle" class="box-title grey-text">Authentication / OIDC</text>
-  <text x="355" y="282" text-anchor="middle" class="box-text grey-text">Future production capability</text>
-  <text x="355" y="302" text-anchor="middle" class="box-text grey-text">Not in current POC</text>
+  <rect x="250" y="230" width="210" height="86" rx="6" fill="#f3f4f6" stroke="#8a8f98" stroke-width="2" stroke-dasharray="7 5"/>
+  <text x="355" y="260" text-anchor="middle" class="box-title future">Authentication / OIDC</text>
+  <text x="355" y="283" text-anchor="middle" class="box-body future">Future production capability</text>
+  <text x="355" y="302" text-anchor="middle" class="box-body future">Not in current POC</text>
 
-  <rect x="500" y="250" width="350" height="300" rx="8" fill="#f4fbf6" stroke="#2e7d32" stroke-width="3"/>
-  <text x="520" y="280" class="box-title green-text">Spring Boot AI Application</text>
-  <rect x="535" y="305" width="280" height="58" rx="8" fill="#d9ead3" stroke="#82b366" stroke-width="2"/>
-  <text x="675" y="329" text-anchor="middle" class="box-title">AI Coordinator</text>
-  <text x="675" y="350" text-anchor="middle" class="box-text green-text">Controls request flow</text>
-  <rect x="535" y="385" width="280" height="74" rx="8" fill="#d9ead3" stroke="#82b366" stroke-width="2"/>
-  <text x="675" y="410" text-anchor="middle" class="box-title">Safety &amp; Governance Controls</text>
-  <text x="675" y="431" text-anchor="middle" class="box-text green-text">PII guardrail · sanitized memory</text>
-  <text x="675" y="450" text-anchor="middle" class="box-text green-text">read-only rules · strong instructions</text>
-  <rect x="535" y="480" width="280" height="58" rx="8" fill="#d9ead3" stroke="#82b366" stroke-width="2"/>
-  <text x="675" y="504" text-anchor="middle" class="box-title">Structured Response</text>
-  <text x="675" y="525" text-anchor="middle" class="box-text green-text">Summary · table · status · notes</text>
+  <rect x="500" y="190" width="420" height="470" rx="6" fill="#f4fbf6" stroke="#2e7d32" stroke-width="3"/>
+  <text x="510" y="220" class="app-title">Spring Boot AI Application</text>
 
-  <rect x="910" y="365" width="180" height="80" rx="8" fill="#fff2cc" stroke="#d6b656" stroke-width="2"/>
-  <text x="1000" y="394" text-anchor="middle" class="box-title">OpenAI LLM</text>
-  <text x="1000" y="416" text-anchor="middle" class="box-text amber-text">Interprets request</text>
-  <text x="1000" y="435" text-anchor="middle" class="box-text amber-text">No direct DB access</text>
+  <rect x="535" y="250" width="160" height="58" rx="6" fill="#d9ead3" stroke="#82b366" stroke-width="2"/>
+  <text x="615" y="275" text-anchor="middle" class="box-title">ChatController</text>
+  <text x="615" y="295" text-anchor="middle" class="box-body" fill="#33691e">Request validation</text>
 
-  <rect x="900" y="485" width="200" height="58" fill="#fdecea" stroke="#c62828" stroke-width="2" stroke-dasharray="4 4"/>
-  <text x="1000" y="509" text-anchor="middle" class="red-text">LLM has no direct</text>
-  <text x="1000" y="528" text-anchor="middle" class="red-text">database access</text>
+  <rect x="725" y="250" width="165" height="58" rx="6" fill="#d9ead3" stroke="#82b366" stroke-width="2"/>
+  <text x="807.5" y="275" text-anchor="middle" class="box-title">ChatCoordinator</text>
+  <text x="807.5" y="295" text-anchor="middle" class="box-body" fill="#33691e">Controls chat turn</text>
 
-  <rect x="1150" y="365" width="190" height="80" rx="8" fill="#d5f0f3" stroke="#0e8088" stroke-width="2"/>
-  <text x="1245" y="394" text-anchor="middle" class="box-title">DAB MCP Tools</text>
-  <text x="1245" y="416" text-anchor="middle" class="box-text teal-text">describe · read · aggregate</text>
+  <rect x="535" y="340" width="355" height="135" rx="6" fill="#d9ead3" stroke="#82b366" stroke-width="2"/>
+  <text x="712.5" y="364" text-anchor="middle" class="box-title">Safety &amp; Governance Controls</text>
+  <text x="712.5" y="387" text-anchor="middle" class="box-body" fill="#33691e">PII Detection</text>
+  <text x="712.5" y="406" text-anchor="middle" class="box-body" fill="#33691e">Request Token Context</text>
+  <text x="712.5" y="425" text-anchor="middle" class="box-body" fill="#33691e">Secure MCP Tool Boundary</text>
+  <text x="712.5" y="444" text-anchor="middle" class="box-body" fill="#33691e">Tool Result Protection</text>
+  <text x="712.5" y="462" text-anchor="middle" class="small" fill="#4f6f37">PiiDetector - SensitiveRequestContext</text>
+  <text x="712.5" y="474" text-anchor="middle" class="small" fill="#4f6f37">SecureMcpToolCallback - SensitivePayloadProtector</text>
 
-  <rect x="780" y="650" width="230" height="80" rx="8" fill="#d5f0f3" stroke="#0e8088" stroke-width="2"/>
-  <text x="895" y="682" text-anchor="middle" class="box-title">Microsoft Data API Builder</text>
-  <text x="895" y="706" text-anchor="middle" class="box-text teal-text">Controlled data API</text>
+  <rect x="535" y="500" width="355" height="58" rx="6" fill="#d9ead3" stroke="#82b366" stroke-width="2"/>
+  <text x="712.5" y="525" text-anchor="middle" class="box-title">PromptProvider + ChatModelRunner</text>
+  <text x="712.5" y="545" text-anchor="middle" class="box-body" fill="#33691e">System prompt - guarded tools</text>
 
-  <path d="M 560 655 C 560 628, 750 628, 750 655 L 750 725 C 750 752, 560 752, 560 725 Z" fill="#cfe8f6" stroke="#10739e" stroke-width="2"/>
-  <ellipse cx="655" cy="655" rx="95" ry="20" fill="#e8f5fb" stroke="#10739e" stroke-width="2"/>
-  <text x="655" y="686" text-anchor="middle" class="box-title">SQL Server</text>
-  <text x="655" y="710" text-anchor="middle" class="box-text blue-text">Read-only access</text>
+  <rect x="535" y="580" width="165" height="58" rx="6" fill="#d9ead3" stroke="#82b366" stroke-width="2"/>
+  <text x="617.5" y="605" text-anchor="middle" class="box-title">Structured Response</text>
+  <text x="617.5" y="625" text-anchor="middle" class="box-body" fill="#33691e">Status - rows - notes</text>
 
-  <path d="M 220 400 L 260 400" class="flow"/>
-  <path d="M 440 400 L 490 400" class="flow"/>
-  <path d="M 850 400 L 900 400" class="flow"/>
-  <path d="M 1090 405 L 1140 405" class="flow"/>
-  <path d="M 1245 445 L 1245 610 L 895 610 L 895 640" class="flow-teal"/>
-  <path d="M 780 690 L 760 690" class="flow-blue"/>
-  <text x="769" y="674" text-anchor="end" class="box-text blue-text">Read-only</text>
-  <path d="M 355 316 L 355 355" class="flow-grey"/>
-  <text x="374" y="345" class="box-text grey-text">Future production</text>
+  <rect x="725" y="580" width="165" height="58" rx="6" fill="#d9ead3" stroke="#82b366" stroke-width="2"/>
+  <text x="807.5" y="602" text-anchor="middle" class="box-title">Sanitized</text>
+  <text x="807.5" y="620" text-anchor="middle" class="box-title">Conversation Memory</text>
+  <text x="807.5" y="636" text-anchor="middle" class="small" fill="#33691e">Protected follow-up context</text>
+
+  <text x="1070" y="342" text-anchor="middle" class="band" fill="#7f6000">Model Provider</text>
+  <rect x="960" y="365" width="220" height="86" rx="6" fill="#fff2cc" stroke="#d6b656" stroke-width="2"/>
+  <text x="1070" y="393" text-anchor="middle" class="box-title">OpenAI API</text>
+  <text x="1070" y="417" text-anchor="middle" class="box-body" fill="#7f6000">Primary: gpt-4.1-mini</text>
+  <text x="1070" y="437" text-anchor="middle" class="box-body" fill="#7f6000">Fallback: gpt-4.1-nano</text>
+
+  <rect x="970" y="535" width="200" height="58" fill="#fdecea" stroke="#c62828" stroke-width="2" stroke-dasharray="4 4"/>
+  <text x="1070" y="560" text-anchor="middle" class="box-title" fill="#b71c1c">LLM has no direct</text>
+  <text x="1070" y="580" text-anchor="middle" class="box-title" fill="#b71c1c">database access</text>
+
+  <text x="1305" y="342" text-anchor="middle" class="band" fill="#0e5c61">Data Access</text>
+  <rect x="1220" y="365" width="190" height="80" rx="6" fill="#d5f0f3" stroke="#0e8088" stroke-width="2"/>
+  <text x="1315" y="398" text-anchor="middle" class="box-title">DAB MCP Tools</text>
+  <text x="1315" y="421" text-anchor="middle" class="box-body" fill="#0e5c61">describe - read - aggregate</text>
+
+  <rect x="830" y="690" width="230" height="80" rx="6" fill="#d5f0f3" stroke="#0e8088" stroke-width="2"/>
+  <text x="945" y="724" text-anchor="middle" class="box-title">Microsoft Data API Builder</text>
+  <text x="945" y="747" text-anchor="middle" class="box-body" fill="#0e5c61">Controlled data API</text>
+
+  <path d="M570 695 C570 668,760 668,760 695 L760 765 C760 792,570 792,570 765 Z" fill="#cfe8f6" stroke="#10739e" stroke-width="2"/>
+  <ellipse cx="665" cy="695" rx="95" ry="27" fill="#d9eef8" stroke="#10739e" stroke-width="2"/>
+  <text x="665" y="725" text-anchor="middle" class="box-title">SQL Server</text>
+  <text x="665" y="748" text-anchor="middle" class="box-body" fill="#0b4f6c">Read-only access</text>
+
+  <path class="edge" d="M220 425 L270 425"/>
+  <path class="edge" d="M440 425 L480 425 L480 279 L535 279"/>
+  <path class="edge" d="M695 279 L725 279"/>
+  <path class="edge-green" d="M807 308 L807 324 L713 324 L713 340"/>
+  <path class="edge-green" d="M713 475 L713 500"/>
+  <path class="edge" d="M890 529 L940 529 L940 408 L960 408"/>
+  <path class="edge" d="M1180 408 L1220 405"/>
+  <path class="edge-teal" d="M1315 445 L1315 640 L945 640 L945 690"/>
+  <path class="edge-blue" d="M830 730 L760 730"/>
+  <path d="M355 316 L355 390" fill="none" stroke="#8a8f98" stroke-width="2" stroke-dasharray="7 5" marker-end="url(#arrow)"/>
+  <rect x="785" y="721" width="66" height="20" fill="#ffffff" stroke="none"/>
+  <text x="818" y="736" text-anchor="middle" class="box-body" fill="#0b4f6c">Read-only</text>
 </svg>
