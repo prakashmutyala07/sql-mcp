@@ -27,7 +27,7 @@ final class SecureMcpToolCallback implements ToolCallback {
 
     private final ToolCallback delegate;
 
-    private final SensitiveDataGuard.Session session;
+    private final SensitiveRequestContext session;
 
     private final ObjectMapper objectMapper;
 
@@ -35,7 +35,7 @@ final class SecureMcpToolCallback implements ToolCallback {
 
     private final SensitiveLoggingPolicy sensitiveLoggingPolicy;
 
-    SecureMcpToolCallback(ToolCallback delegate, SensitiveDataGuard.Session session, ObjectMapper objectMapper,
+    SecureMcpToolCallback(ToolCallback delegate, SensitiveRequestContext session, ObjectMapper objectMapper,
             SensitivePayloadProtector payloadProtector, SensitiveLoggingPolicy sensitiveLoggingPolicy) {
         this.delegate = delegate;
         this.session = session;

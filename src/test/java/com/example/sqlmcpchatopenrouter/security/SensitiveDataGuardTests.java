@@ -70,7 +70,7 @@ class SensitiveDataGuardTests {
 
     @Test
     void sensitiveValuesNeverReachTheModelPayload() {
-        SensitiveDataGuard.Session session = this.guard.newSession();
+        SensitiveRequestContext session = this.guard.newSession();
         ToolCallback guarded = session.wrap(new ToolCallback[] { stubCallback(TOOL_RESULT) })[0];
 
         String modelBoundPayload = guarded.call("{\"entity\":\"Customer\"}");
@@ -90,7 +90,7 @@ class SensitiveDataGuardTests {
 
     @Test
     void tokensAreDeterministicAcrossCalls() {
-        SensitiveDataGuard.Session session = this.guard.newSession();
+        SensitiveRequestContext session = this.guard.newSession();
         ToolCallback guarded = session.wrap(new ToolCallback[] { stubCallback(TOOL_RESULT) })[0];
 
         String first = guarded.call("{\"entity\":\"Customer\"}");
@@ -102,7 +102,7 @@ class SensitiveDataGuardTests {
 
     @Test
     void finalAnswerRemainsPseudonymizedForTheUser() {
-        SensitiveDataGuard.Session session = this.guard.newSession();
+        SensitiveRequestContext session = this.guard.newSession();
         ToolCallback guarded = session.wrap(new ToolCallback[] { stubCallback(TOOL_RESULT) })[0];
         String payload = guarded.call("{\"entity\":\"Customer\"}");
 
@@ -114,7 +114,7 @@ class SensitiveDataGuardTests {
 
     @Test
     void unparseableToolResultIsWithheldRatherThanForwarded() {
-        SensitiveDataGuard.Session session = this.guard.newSession();
+        SensitiveRequestContext session = this.guard.newSession();
         ToolCallback guarded = session.wrap(new ToolCallback[] { stubCallback("<html>Jane Doe</html>") })[0];
 
         String modelBoundPayload = guarded.call("{\"entity\":\"Customer\"}");
@@ -130,7 +130,7 @@ class SensitiveDataGuardTests {
                 {\\"CustomerId\\":1,\\"FullName\\":\\"Jane Doe\\",\\"Email\\":\\"jane.doe@example.com\\"}]}}"}],\
                 "isError":false}
                 """;
-        SensitiveDataGuard.Session session = this.guard.newSession();
+        SensitiveRequestContext session = this.guard.newSession();
         ToolCallback guarded = session.wrap(new ToolCallback[] { stubCallback(envelope) })[0];
 
         String modelBoundPayload = guarded.call("{\"entity\":\"Customer\"}");
@@ -145,7 +145,7 @@ class SensitiveDataGuardTests {
 
     @Test
     void inboundPiiIsTokenizedBeforeItCanReachMemoryOrTheModel() {
-        SensitiveDataGuard.Session session = this.guard.newSession();
+        SensitiveRequestContext session = this.guard.newSession();
 
         String protectedInput = session.protectInput(
                 "Find customer named Jane Doe with jane.doe@example.com or phone 415-555-0101 on 2025-01-08.");
@@ -162,7 +162,7 @@ class SensitiveDataGuardTests {
 
     @Test
     void bareCustomerNameIsTokenizedBeforeItCanReachModel() {
-        SensitiveDataGuard.Session session = this.guard.newSession();
+        SensitiveRequestContext session = this.guard.newSession();
 
         String protectedInput = session.protectInput("give me the details of customer Ethan Thomas");
 
@@ -173,7 +173,7 @@ class SensitiveDataGuardTests {
 
     @Test
     void knownSensitiveValuesEchoedByModelAreRetokenizedForFinalOutput() {
-        SensitiveDataGuard.Session session = this.guard.newSession();
+        SensitiveRequestContext session = this.guard.newSession();
         String protectedInput = session.protectInput("give me the details of customer Ethan Thomas");
         String token = protectedInput.replaceAll(".*(CU_[0-9a-f]{6}).*", "$1");
 
@@ -184,7 +184,7 @@ class SensitiveDataGuardTests {
 
     @Test
     void protectedToolArgumentsAreRestoredOnlyForDab() {
-        SensitiveDataGuard.Session session = this.guard.newSession();
+        SensitiveRequestContext session = this.guard.newSession();
         String protectedInput = session.protectInput("FullName eq 'Jane Doe'");
         String token = protectedInput.replaceAll(".*'(CU_[0-9a-f]{6})'.*", "$1");
         AtomicReference<String> dabInput = new AtomicReference<>();
@@ -227,7 +227,7 @@ class SensitiveDataGuardTests {
 
     @Test
     void finalOutputRedactsProviderGeneratedContactDetails() {
-        SensitiveDataGuard.Session session = this.guard.newSession();
+        SensitiveRequestContext session = this.guard.newSession();
 
         String protectedOutput = session.protectOutput("Contact invented@example.com or 415-555-0101.");
 
@@ -237,7 +237,7 @@ class SensitiveDataGuardTests {
     @Test
     void unparseableTextInsideMcpEnvelopeIsWithheld() {
         String envelope = "{\"content\":[{\"type\":\"text\",\"text\":\"{Jane Doe\"}],\"isError\":false}";
-        SensitiveDataGuard.Session session = this.guard.newSession();
+        SensitiveRequestContext session = this.guard.newSession();
 
         String modelBoundPayload = session.wrap(new ToolCallback[] { stubCallback(envelope) })[0].call("{}");
 
@@ -246,7 +246,7 @@ class SensitiveDataGuardTests {
 
     @Test
     void unknownTokenInModelOutputIsLeftAlone() {
-        SensitiveDataGuard.Session session = this.guard.newSession();
+        SensitiveRequestContext session = this.guard.newSession();
         session.wrap(new ToolCallback[] { stubCallback(TOOL_RESULT) })[0].call("{}");
 
         assertThat(session.protectOutput("Unknown CU_ffffff here")).isEqualTo("Unknown CU_ffffff here");

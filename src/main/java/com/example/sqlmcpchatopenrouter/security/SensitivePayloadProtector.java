@@ -63,7 +63,7 @@ final class SensitivePayloadProtector {
                         ------------------------------------------------------------""", requestId,
                         this.sensitiveLoggingPolicy.sensitiveLoggingEnabled() ? payload : "<raw database result hidden>",
                         this.sensitiveLoggingPolicy.sensitiveLoggingEnabled()
-                                ? SensitiveDataGuard.detectedEntityValues(tokens, existingTokens)
+                                ? SensitiveRequestContext.detectedEntityValues(tokens, existingTokens)
                                 : "sensitiveValues=" + protectedEntities + " tokenTypes=" + tokens.prefixes(),
                         protectedPayload);
             }

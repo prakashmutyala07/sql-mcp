@@ -20,7 +20,7 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.server.ResponseStatusException;
 
 import com.example.sqlmcpchatopenrouter.config.AppProperties;
-import com.example.sqlmcpchatopenrouter.security.SensitiveDataGuard;
+import com.example.sqlmcpchatopenrouter.security.SensitiveRequestContext;
 import com.openai.errors.OpenAIInvalidDataException;
 import com.openai.errors.RateLimitException;
 
@@ -54,7 +54,7 @@ public class ChatModelRunner {
     }
 
     public Result run(String message, String systemPrompt, List<Message> history, ToolCallback[] tools,
-            SensitiveDataGuard.Session guardSession, ProgressSink progressSink, String requestId) {
+            SensitiveRequestContext guardSession, ProgressSink progressSink, String requestId) {
         String primary = this.properties.models().primary();
         String fallback = this.properties.models().fallback();
 
@@ -82,7 +82,7 @@ public class ChatModelRunner {
     }
 
     private Result fallbackOrThrow(String message, String systemPrompt, List<Message> history, ToolCallback[] tools,
-            SensitiveDataGuard.Session guardSession, ProgressSink progressSink, String fallback,
+            SensitiveRequestContext guardSession, ProgressSink progressSink, String fallback,
             String primaryFailureMessage, ModelCallException primaryFailure, String requestId) {
         if (!this.properties.execution().fallbackEnabled()) {
             throw chatFailure(userMessageFor(primaryFailureMessage, primaryFailure));
@@ -98,7 +98,7 @@ public class ChatModelRunner {
     }
 
     private Result complete(String message, String systemPrompt, List<Message> history, ToolCallback[] tools,
-            SensitiveDataGuard.Session guardSession, String model, boolean fallbackUsed, String requestId) {
+            SensitiveRequestContext guardSession, String model, boolean fallbackUsed, String requestId) {
         long startedAt = System.nanoTime();
         org.springframework.ai.chat.model.ChatResponse response;
         if (logger.isDebugEnabled()) {
@@ -166,7 +166,7 @@ public class ChatModelRunner {
     }
 
     private static ChatResponse.ModelAnswer sanitize(ChatResponse.ModelAnswer answer,
-            SensitiveDataGuard.Session guardSession) {
+            SensitiveRequestContext guardSession) {
         if (answer == null) {
             return new ChatResponse.ModelAnswer(ChatResponse.Status.ERROR, STRUCTURED_OUTPUT_ERROR,
                     List.of(), List.of(), false, "", "");

@@ -15,6 +15,7 @@ import org.springframework.util.StringUtils;
 
 import com.example.sqlmcpchatopenrouter.mcp.McpToolCatalog;
 import com.example.sqlmcpchatopenrouter.security.SensitiveDataGuard;
+import com.example.sqlmcpchatopenrouter.security.SensitiveRequestContext;
 
 /** Coordinates a chat turn; specialized collaborators own prompts, privacy, tools, and model policy. */
 @Service
@@ -54,7 +55,7 @@ public class ChatCoordinator implements ChatOperations {
         long requestStartedAt = System.nanoTime();
 
         progressSink.progress("prepare", "Preparing a safe database request\u2026");
-        SensitiveDataGuard.Session guardSession =
+        SensitiveRequestContext guardSession =
                 this.sensitiveDataGuard.newSession(requestId, step -> progressSink.progress("tool", step));
         String protectedMessage = guardSession.protectInput(message);
         ToolCallback[] tools = guardSession.wrap(this.mcpToolCatalog.toolCallbacksOrEmpty());
@@ -134,7 +135,7 @@ public class ChatCoordinator implements ChatOperations {
     }
 
     private static ChatResponse revealForTrustedLocalDisplay(ChatResponse response,
-            SensitiveDataGuard.Session guardSession) {
+            SensitiveRequestContext guardSession) {
         return new ChatResponse(response.conversationId(), response.model(), response.fallbackUsed(),
                 response.status(), guardSession.revealForTrustedLocalDisplay(response.message()),
                 response.columns().stream().map(guardSession::revealForTrustedLocalDisplay).toList(),

@@ -19,6 +19,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import com.example.sqlmcpchatopenrouter.config.AppProperties;
 import com.example.sqlmcpchatopenrouter.security.SensitiveDataGuard;
+import com.example.sqlmcpchatopenrouter.security.SensitiveRequestContext;
 import com.openai.core.http.Headers;
 import com.openai.errors.OpenAIInvalidDataException;
 import com.openai.errors.RateLimitException;
@@ -185,7 +186,7 @@ class ChatModelRunnerTests {
                 List.of(new Generation(new org.springframework.ai.chat.messages.AssistantMessage(content))));
     }
 
-    private record Fixture(ChatModelRunner runner, SensitiveDataGuard.Session guardSession) {
+    private record Fixture(ChatModelRunner runner, SensitiveRequestContext guardSession) {
 
         private ChatModelRunner.Result run() {
             return this.runner.run("question", "system", List.of(), new ToolCallback[0], this.guardSession,
