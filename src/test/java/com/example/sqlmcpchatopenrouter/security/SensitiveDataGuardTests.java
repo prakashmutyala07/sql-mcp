@@ -161,6 +161,28 @@ class SensitiveDataGuardTests {
     }
 
     @Test
+    void bareCustomerNameIsTokenizedBeforeItCanReachModel() {
+        SensitiveDataGuard.Session session = this.guard.newSession();
+
+        String protectedInput = session.protectInput("give me the details of customer Ethan Thomas");
+
+        assertThat(protectedInput)
+                .doesNotContain("Ethan Thomas")
+                .containsPattern("CU_[0-9a-f]{6}");
+    }
+
+    @Test
+    void knownSensitiveValuesEchoedByModelAreRetokenizedForFinalOutput() {
+        SensitiveDataGuard.Session session = this.guard.newSession();
+        String protectedInput = session.protectInput("give me the details of customer Ethan Thomas");
+        String token = protectedInput.replaceAll(".*(CU_[0-9a-f]{6}).*", "$1");
+
+        String protectedOutput = session.protectOutput("Customer Ethan Thomas is a Gold-tier customer.");
+
+        assertThat(protectedOutput).isEqualTo("Customer " + token + " is a Gold-tier customer.");
+    }
+
+    @Test
     void protectedToolArgumentsAreRestoredOnlyForDab() {
         SensitiveDataGuard.Session session = this.guard.newSession();
         String protectedInput = session.protectInput("FullName eq 'Jane Doe'");

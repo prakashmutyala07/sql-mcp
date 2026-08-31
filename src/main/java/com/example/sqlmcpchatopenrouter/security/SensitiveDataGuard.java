@@ -52,7 +52,7 @@ public class SensitiveDataGuard {
             "(?<!\\w)(?:\\+?\\d[\\d(). -]{7,}\\d)(?!\\w)");
 
     private static final Pattern EXPLICIT_NAME = Pattern.compile(
-            "(?i:\\b(?:customer\\s+named|full\\s+name\\s*(?:is|=|:)|name\\s*(?:is|=|:))\\s*['\"]?)"
+            "(?i:\\b(?:customer(?:\\s+(?:named|called))?|full\\s+name\\s*(?:is|=|:)|name\\s*(?:is|=|:))\\s*['\"]?)"
                     + "([\\p{Lu}][\\p{L}'-]+(?:\\s+[\\p{Lu}][\\p{L}'-]+){1,3})");
 
     private static final Pattern FULL_NAME_FILTER = Pattern.compile(
@@ -165,7 +165,8 @@ public class SensitiveDataGuard {
             if (!StringUtils.hasText(text)) {
                 return text;
             }
-            return redactPhoneMatches(EMAIL.matcher(text).replaceAll("[REDACTED_EMAIL]"));
+            String protectedText = this.tokens.protectKnownValues(text);
+            return redactPhoneMatches(EMAIL.matcher(protectedText).replaceAll("[REDACTED_EMAIL]"));
         }
 
         public int tokenCount() {

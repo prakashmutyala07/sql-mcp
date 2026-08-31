@@ -3,6 +3,7 @@ package com.example.sqlmcpchatopenrouter.security;
 import java.nio.charset.StandardCharsets;
 import java.util.HexFormat;
 import java.util.LinkedHashMap;
+import java.util.Comparator;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -54,6 +55,21 @@ final class SensitiveTokenStore {
         }
         matcher.appendTail(restored);
         return restored.toString();
+    }
+
+    String protectKnownValues(String text) {
+        if (!StringUtils.hasText(text) || this.tokenToValue.isEmpty()) {
+            return text;
+        }
+        String protectedText = text;
+        for (Map.Entry<String, String> entry : this.tokenToValue.entrySet().stream()
+                .sorted(Map.Entry.comparingByValue(Comparator.comparingInt(String::length).reversed()))
+                .toList()) {
+            if (StringUtils.hasText(entry.getValue())) {
+                protectedText = protectedText.replace(entry.getValue(), entry.getKey());
+            }
+        }
+        return protectedText;
     }
 
     String tokenFor(String field, String prefix, String value) {

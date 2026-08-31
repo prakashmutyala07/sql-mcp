@@ -49,8 +49,8 @@ class ChatCoordinatorTests {
                 "Find jane.doe@example.com or call 415-555-0101", "privacy-test");
 
         assertThat(result.toString()).doesNotContain(EMAIL, PHONE);
-        assertThat(result.message()).contains("[REDACTED_EMAIL]", "[REDACTED_PHONE]");
-        assertThat(result.rows()).containsExactly(List.of("42", "[REDACTED_EMAIL]"));
+        assertThat(result.message()).containsPattern("EM_[0-9a-f]{6}").containsPattern("PH_[0-9a-f]{6}");
+        assertThat(result.rows().getFirst().get(1)).matches("EM_[0-9a-f]{6}");
         assertThat(receivedPrompt.get().getContents()).doesNotContain(EMAIL, PHONE);
         assertThat(fixture.memory().get("privacy-test"))
                 .extracting(message -> message.getText())
