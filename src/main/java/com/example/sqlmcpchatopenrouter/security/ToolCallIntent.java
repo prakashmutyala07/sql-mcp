@@ -53,19 +53,7 @@ final class ToolCallIntent {
     }
 
     static int resolvedTokenCount(String protectedInput, String detokenizedInput) {
-        if (!StringUtils.hasText(protectedInput) || !StringUtils.hasText(detokenizedInput)
-                || protectedInput.equals(detokenizedInput)) {
-            return 0;
-        }
-        java.util.regex.Matcher matcher =
-                java.util.regex.Pattern.compile("\\b[A-Z]{2,8}_[0-9a-f]{6,12}\\b").matcher(protectedInput);
-        int count = 0;
-        while (matcher.find()) {
-            if (!detokenizedInput.contains(matcher.group())) {
-                count++;
-            }
-        }
-        return count;
+        return SensitiveTokenStore.resolvedTokenCount(protectedInput, detokenizedInput);
     }
 
     static List<String> keys(ObjectMapper objectMapper, String toolInput) {

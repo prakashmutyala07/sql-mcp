@@ -57,6 +57,21 @@ final class SensitiveTokenStore {
         return restored.toString();
     }
 
+    static int resolvedTokenCount(String protectedInput, String detokenizedInput) {
+        if (!StringUtils.hasText(protectedInput) || !StringUtils.hasText(detokenizedInput)
+                || protectedInput.equals(detokenizedInput)) {
+            return 0;
+        }
+        Matcher matcher = TOKEN_PATTERN.matcher(protectedInput);
+        int count = 0;
+        while (matcher.find()) {
+            if (!detokenizedInput.contains(matcher.group())) {
+                count++;
+            }
+        }
+        return count;
+    }
+
     String protectKnownValues(String text) {
         if (!StringUtils.hasText(text) || this.tokenToValue.isEmpty()) {
             return text;
