@@ -1,0 +1,767 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Interactive Layer-by-Layer Query Flow</title>
+  <style>
+    :root {
+      --bg: #f6f8fb;
+      --surface: #ffffff;
+      --ink: #172033;
+      --muted: #607086;
+      --line: #d9e0ea;
+      --shadow: 0 16px 45px rgba(31, 45, 68, 0.12);
+      --active: #111827;
+      --ui: #dcecff;
+      --ui-edge: #2b73c5;
+      --app: #dcf7e6;
+      --app-edge: #26834e;
+      --safety: #f7e3ff;
+      --safety-edge: #8d43b5;
+      --prompt: #ffe9ce;
+      --prompt-edge: #c46b1f;
+      --llm: #fff2b9;
+      --llm-edge: #b8860b;
+      --data: #e6f0e8;
+      --data-edge: #4f8063;
+      --final: #d7f5f3;
+      --final-edge: #168983;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: Arial, Helvetica, sans-serif;
+      line-height: 1.45;
+    }
+
+    .page {
+      max-width: 1360px;
+      margin: 0 auto;
+      padding: 28px;
+    }
+
+    header {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 20px;
+      margin-bottom: 20px;
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: 30px;
+      line-height: 1.12;
+      letter-spacing: 0;
+    }
+
+    .subtitle {
+      margin: 0;
+      max-width: 860px;
+      color: var(--muted);
+      font-size: 15px;
+    }
+
+    .query-card {
+      min-width: 300px;
+      max-width: 420px;
+      padding: 14px 16px;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: 0 8px 22px rgba(31, 45, 68, 0.06);
+    }
+
+    .query-label {
+      margin: 0 0 5px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    .query-text {
+      margin: 0;
+      font-size: 15px;
+      font-weight: 700;
+    }
+
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin: 0 0 18px;
+    }
+
+    .legend-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .swatch {
+      width: 15px;
+      height: 15px;
+      border: 2px solid;
+      border-radius: 4px;
+    }
+
+    .swatch.ui { background: var(--ui); border-color: var(--ui-edge); }
+    .swatch.app { background: var(--app); border-color: var(--app-edge); }
+    .swatch.safety { background: var(--safety); border-color: var(--safety-edge); }
+    .swatch.prompt { background: var(--prompt); border-color: var(--prompt-edge); }
+    .swatch.llm { background: var(--llm); border-color: var(--llm-edge); }
+    .swatch.data { background: var(--data); border-color: var(--data-edge); }
+    .swatch.final { background: var(--final); border-color: var(--final-edge); }
+
+    .workspace {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 390px;
+      gap: 18px;
+      align-items: start;
+    }
+
+    .canvas-wrap,
+    .detail-panel {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+    }
+
+    .canvas-wrap {
+      padding: 18px;
+    }
+
+    .canvas-title-row,
+    .panel-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .canvas-title,
+    .panel-title {
+      margin: 0;
+      font-size: 18px;
+      letter-spacing: 0;
+    }
+
+    .step-pill {
+      flex: 0 0 auto;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: #eef2f7;
+      color: #405069;
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .canvas {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(118px, 1fr));
+      gap: 12px;
+      align-items: stretch;
+    }
+
+    .layer {
+      position: relative;
+      min-height: 96px;
+      padding: 13px 12px 11px;
+      border: 2px solid var(--line);
+      border-radius: 8px;
+      cursor: pointer;
+      transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
+    }
+
+    .layer::after {
+      content: "";
+      position: absolute;
+      right: -14px;
+      top: 50%;
+      width: 14px;
+      height: 2px;
+      background: #a7b2c2;
+    }
+
+    .layer:nth-child(5)::after,
+    .layer:nth-child(10)::after,
+    .layer:nth-child(15)::after {
+      display: none;
+    }
+
+    .layer:hover {
+      transform: translateY(-2px);
+    }
+
+    .layer.active {
+      border-color: var(--active);
+      box-shadow: 0 0 0 4px rgba(17, 24, 39, 0.12), 0 18px 30px rgba(17, 24, 39, 0.18);
+      transform: translateY(-3px);
+    }
+
+    .layer.done {
+      opacity: 0.82;
+    }
+
+    .layer-number {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 22px;
+      height: 22px;
+      margin-bottom: 9px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.75);
+      border: 1px solid rgba(17, 24, 39, 0.18);
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .layer-name {
+      margin: 0;
+      font-size: 14px;
+      font-weight: 800;
+      line-height: 1.22;
+    }
+
+    .layer-note {
+      margin: 7px 0 0;
+      color: #405069;
+      font-size: 12px;
+    }
+
+    .layer.ui { background: var(--ui); border-color: var(--ui-edge); }
+    .layer.app { background: var(--app); border-color: var(--app-edge); }
+    .layer.safety { background: var(--safety); border-color: var(--safety-edge); }
+    .layer.prompt { background: var(--prompt); border-color: var(--prompt-edge); }
+    .layer.llm { background: var(--llm); border-color: var(--llm-edge); }
+    .layer.data { background: var(--data); border-color: var(--data-edge); }
+    .layer.final { background: var(--final); border-color: var(--final-edge); }
+    .layer.active { border-color: var(--active); }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid var(--line);
+    }
+
+    button {
+      min-height: 38px;
+      padding: 0 15px;
+      border: 1px solid #c8d2df;
+      border-radius: 7px;
+      background: #ffffff;
+      color: var(--ink);
+      font: inherit;
+      font-size: 14px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    button.primary {
+      background: #172033;
+      border-color: #172033;
+      color: #ffffff;
+    }
+
+    button:hover {
+      filter: brightness(0.97);
+    }
+
+    button:disabled {
+      cursor: not-allowed;
+      opacity: 0.45;
+    }
+
+    .progress-track {
+      flex: 1 1 180px;
+      min-width: 160px;
+      height: 10px;
+      overflow: hidden;
+      border-radius: 999px;
+      background: #e7edf5;
+    }
+
+    .progress-bar {
+      width: 0;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, #2b73c5, #168983);
+      transition: width 180ms ease;
+    }
+
+    .detail-panel {
+      position: sticky;
+      top: 18px;
+      padding: 18px;
+    }
+
+    .panel-subtitle {
+      margin: 0 0 16px;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .detail-section {
+      margin-top: 14px;
+      padding-top: 14px;
+      border-top: 1px solid var(--line);
+    }
+
+    .detail-heading {
+      margin: 0 0 7px;
+      color: #43526a;
+      font-size: 12px;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+
+    .detail-text {
+      margin: 0;
+      color: #233044;
+      font-size: 14px;
+    }
+
+    pre {
+      margin: 0;
+      max-height: 280px;
+      overflow: auto;
+      padding: 12px;
+      border: 1px solid #d9e0ea;
+      border-radius: 8px;
+      background: #f8fafc;
+      color: #182235;
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+      font-size: 12px;
+      line-height: 1.45;
+      white-space: pre-wrap;
+    }
+
+    .callouts {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 18px;
+    }
+
+    .callout {
+      padding: 14px;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+    }
+
+    .callout h3 {
+      margin: 0 0 7px;
+      font-size: 14px;
+    }
+
+    .callout p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    @media (max-width: 1120px) {
+      header {
+        align-items: stretch;
+        flex-direction: column;
+      }
+
+      .query-card {
+        max-width: none;
+      }
+
+      .workspace {
+        grid-template-columns: 1fr;
+      }
+
+      .detail-panel {
+        position: static;
+      }
+
+      .callouts {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 780px) {
+      .page {
+        padding: 18px;
+      }
+
+      .canvas {
+        grid-template-columns: 1fr;
+      }
+
+      .layer::after {
+        right: 50%;
+        top: auto;
+        bottom: -14px;
+        width: 2px;
+        height: 14px;
+      }
+
+      .layer:nth-child(5)::after,
+      .layer:nth-child(10)::after {
+        display: block;
+      }
+
+      .layer:nth-child(15)::after {
+        display: none;
+      }
+
+      .callouts {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header>
+      <div>
+        <h1>Interactive Layer-by-Layer Query Flow</h1>
+        <p class="subtitle">Walk through how one business question moves through the UI, Spring Boot AI application, PII controls, OpenRouter LLM, DAB MCP tooling, Microsoft Data API Builder, read-only SQL Server, and back to a structured UI response.</p>
+      </div>
+      <section class="query-card" aria-label="Example query">
+        <p class="query-label">Example query</p>
+        <p class="query-text">"List 10 customers with their name, city, and loyalty tier."</p>
+      </section>
+    </header>
+
+    <nav class="legend" aria-label="Legend">
+      <span class="legend-item"><span class="swatch ui"></span>UI / API</span>
+      <span class="legend-item"><span class="swatch app"></span>Spring Boot AI Application</span>
+      <span class="legend-item"><span class="swatch safety"></span>Safety / PII</span>
+      <span class="legend-item"><span class="swatch prompt"></span>Prompt / Memory</span>
+      <span class="legend-item"><span class="swatch llm"></span>LLM</span>
+      <span class="legend-item"><span class="swatch data"></span>MCP / DAB / Data</span>
+      <span class="legend-item"><span class="swatch final"></span>Final response</span>
+    </nav>
+
+    <section class="workspace">
+      <div class="canvas-wrap">
+        <div class="canvas-title-row">
+          <h2 class="canvas-title">Architecture Canvas</h2>
+          <span class="step-pill" id="stepCounter">Step 1 of 15</span>
+        </div>
+        <div class="canvas" id="canvas" aria-label="Query flow layers"></div>
+        <div class="controls" aria-label="Step controls">
+          <button id="prevBtn" type="button">Previous</button>
+          <button id="nextBtn" class="primary" type="button">Next</button>
+          <button id="resetBtn" type="button">Reset</button>
+          <button id="playBtn" type="button">Auto-play</button>
+          <div class="progress-track" aria-hidden="true">
+            <div class="progress-bar" id="progressBar"></div>
+          </div>
+        </div>
+      </div>
+
+      <aside class="detail-panel" aria-live="polite">
+        <div class="panel-top">
+          <h2 class="panel-title" id="panelTitle">Business User</h2>
+          <span class="step-pill" id="panelCategory">UI / API</span>
+        </div>
+        <p class="panel-subtitle" id="panelSummary">Starts the business question in natural language.</p>
+
+        <section class="detail-section">
+          <h3 class="detail-heading">Receives</h3>
+          <pre id="panelInput"></pre>
+        </section>
+        <section class="detail-section">
+          <h3 class="detail-heading">Does</h3>
+          <p class="detail-text" id="panelDoes"></p>
+        </section>
+        <section class="detail-section">
+          <h3 class="detail-heading">Sends next</h3>
+          <pre id="panelOutput"></pre>
+        </section>
+      </aside>
+    </section>
+
+    <section class="callouts" aria-label="Key explanations">
+      <article class="callout">
+        <h3>PII Guardrail</h3>
+        <p>Protects sensitive values in input, tool results, final output, and memory where applicable. It is an application guardrail, not only a prompt instruction.</p>
+      </article>
+      <article class="callout">
+        <h3>Sanitized Memory</h3>
+        <p>Keeps safe previous context for follow-ups, such as "Show customers from Mumbai" followed by "Only show Gold tier", without storing raw sensitive data.</p>
+      </article>
+      <article class="callout">
+        <h3>DAB MCP Access</h3>
+        <p>Approved read-only tools mediate database access. The LLM requests tools but does not connect directly to SQL Server.</p>
+      </article>
+      <article class="callout">
+        <h3>Structured Response</h3>
+        <p>Returns status, message, columns, rows, warnings, and notes predictably for the UI. This format is helpful, but it is not the security layer.</p>
+      </article>
+    </section>
+  </main>
+
+  <script>
+    const layers = [
+      {
+        name: "Business User",
+        category: "UI / API",
+        type: "ui",
+        summary: "Starts the business question in natural language.",
+        receives: "Business need:\nFind a small customer sample for discussion.",
+        does: "Asks a natural-language question without needing to know SQL, schemas, tools, or data-access rules.",
+        sends: "User message:\n\"List 10 customers with their name, city, and loyalty tier.\""
+      },
+      {
+        name: "Chat UI",
+        category: "UI / API",
+        type: "ui",
+        summary: "Collects the message and sends it to the API.",
+        receives: "User message:\n\"List 10 customers with their name, city, and loyalty tier.\"\n\nOptional conversationId:\nconversation-demo-001",
+        does: "Displays the user message, keeps the conversation identity, and creates a request payload for the backend.",
+        sends: "{\n  \"conversationId\": \"conversation-demo-001\",\n  \"message\": \"List 10 customers with their name, city, and loyalty tier.\"\n}"
+      },
+      {
+        name: "ChatController / API",
+        category: "UI / API",
+        type: "ui",
+        summary: "Validates and forwards the chat turn.",
+        receives: "{\n  \"conversationId\": \"conversation-demo-001\",\n  \"message\": \"List 10 customers with their name, city, and loyalty tier.\"\n}",
+        does: "Accepts the request, performs basic API validation, and delegates the chat turn to the application coordinator.",
+        sends: "Chat turn request:\nconversationId = conversation-demo-001\nmessage = \"List 10 customers with their name, city, and loyalty tier.\""
+      },
+      {
+        name: "ChatCoordinator",
+        category: "Spring Boot AI Application",
+        type: "app",
+        summary: "Orchestrates the whole request lifecycle.",
+        receives: "Chat turn request from ChatController:\n- conversationId\n- user message",
+        does: "Coordinates guardrails, system prompt, sanitized memory, model execution, tool protection, and final structured response handling.",
+        sends: "Message to PII Guardrail:\n\"List 10 customers with their name, city, and loyalty tier.\""
+      },
+      {
+        name: "PII Guardrail / SensitiveDataGuard",
+        category: "Safety / PII",
+        type: "safety",
+        summary: "Protects sensitive values before model use.",
+        receives: "User input:\n\"List 10 customers with their name, city, and loyalty tier.\"",
+        does: "Checks for sensitive values such as names, emails, phone numbers, and references. This is a real application guardrail, not only a prompt instruction.",
+        sends: "Protected user input:\n\"List 10 customers with their name, city, and loyalty tier.\"\n\nNo sensitive value was present in this request, so the wording is unchanged."
+      },
+      {
+        name: "System Prompt / PromptProvider",
+        category: "Prompt / Memory",
+        type: "prompt",
+        summary: "Adds application instructions and boundaries.",
+        receives: "Protected user input plus request context.",
+        does: "Provides system instructions for read-only behavior, approved tool use, schema grounding, prompt-injection resistance, and structured response expectations.",
+        sends: "System instructions:\n- Use approved DAB MCP tools only\n- Read-only access\n- Do not expose unrequested PII\n- Return a structured response\n\nProtected user input:\n\"List 10 customers with their name, city, and loyalty tier.\""
+      },
+      {
+        name: "Sanitized Conversation Memory",
+        category: "Prompt / Memory",
+        type: "prompt",
+        summary: "Adds safe prior context for follow-up questions.",
+        receives: "ConversationId:\nconversation-demo-001\n\nSafe prior context, if available.",
+        does: "Keeps safe previous chat context for follow-up questions and should not store raw sensitive data. Example: previous \"Show customers from Mumbai\" plus follow-up \"Only show Gold tier\".",
+        sends: "Sanitized memory context:\n{\n  \"previousIntent\": \"customer search\",\n  \"previousFilter\": \"City = Mumbai\",\n  \"rawSensitiveValuesStored\": false\n}\n\nCurrent protected request continues with safe context."
+      },
+      {
+        name: "ChatModelRunner / Spring AI ChatClient",
+        category: "Spring Boot AI Application",
+        type: "app",
+        summary: "Packages model call, tools, prompt, and memory.",
+        receives: "System instructions\nProtected user input\nSanitized memory context\nApproved DAB MCP tool definitions",
+        does: "Builds the Spring AI ChatClient interaction and exposes only approved guarded tools to the model runtime.",
+        sends: "Model request:\n- instructions: read-only, grounded, structured\n- user ask: list 10 customers with name, city, loyalty tier\n- memory: safe context only\n- tools: approved DAB MCP read tools"
+      },
+      {
+        name: "OpenRouter LLM",
+        category: "LLM",
+        type: "llm",
+        summary: "Interprets intent and requests approved tools.",
+        receives: "Model request with prompt, safe context, and tool definitions.",
+        does: "Plans how to answer the request. It does not directly connect to SQL Server; it can only request approved tools provided by the application.",
+        sends: "Tool request:\n{\n  \"tool\": \"dab.customers.read\",\n  \"operation\": \"select\",\n  \"columns\": [\"CustomerId\", \"FullName\", \"Email\", \"Phone\", \"City\", \"LoyaltyTier\"],\n  \"limit\": 10\n}"
+      },
+      {
+        name: "DAB MCP Tools",
+        category: "MCP / DAB / Data",
+        type: "data",
+        summary: "Provides approved read-only database tools.",
+        receives: "Approved tool request from the model runtime:\nread customers, selected columns, limit 10.",
+        does: "Controls which database operations are available. The LLM does not connect to SQL Server directly; DAB/MCP mediates access.",
+        sends: "DAB request:\nRead Customers entity\nColumns: CustomerId, FullName, Email, Phone, City, LoyaltyTier\nLimit: 10"
+      },
+      {
+        name: "Microsoft Data API Builder",
+        category: "MCP / DAB / Data",
+        type: "data",
+        summary: "Executes configured data operations.",
+        receives: "Read request for configured Customers entity.",
+        does: "Maps the approved entity request to configured database access and applies DAB-level operation controls.",
+        sends: "Read-only SQL request for customer fields through configured DAB access."
+      },
+      {
+        name: "SQL Server read-only access",
+        category: "MCP / DAB / Data",
+        type: "data",
+        summary: "Returns source rows under database permissions.",
+        receives: "Read-only query for customer fields.",
+        does: "Uses read-only permissions. The prompt says read-only, but database permissions must enforce it.",
+        sends: "Raw database result:\nCustomerId: 1\nFullName: John Smith\nEmail: john.smith@example.com\nPhone: 9876543210\nCity: San Francisco\nLoyaltyTier: Gold"
+      },
+      {
+        name: "PII protection on tool result",
+        category: "Safety / PII",
+        type: "safety",
+        summary: "Pseudonymizes sensitive values from tool output.",
+        receives: "Raw database result:\nCustomerId: 1\nFullName: John Smith\nEmail: john.smith@example.com\nPhone: 9876543210\nCity: San Francisco\nLoyaltyTier: Gold",
+        does: "Protects sensitive values before they are used in model continuation, final output, or memory. CustomerId remains unchanged because it is a stable non-sensitive ID.",
+        sends: "Protected result:\nCustomerId: 1\nCustomerNameToken: CU_e995b7\nEmailToken: EM_88fa21\nPhoneToken: PH_19ac44\nCity: San Francisco\nLoyaltyTier: Gold\n\nFullName is pseudonymized because the user asked for name. Email and phone are protected and not shown unless needed."
+      },
+      {
+        name: "Structured Response",
+        category: "Final response",
+        type: "final",
+        summary: "Formats the answer predictably for the UI.",
+        receives: "Protected tool result and model-generated answer content.",
+        does: "Creates a UI-ready shape with status, message, columns, rows, warnings, and notes. This is not the security layer; it is the predictable response contract.",
+        sends: "{\n  \"status\": \"success\",\n  \"message\": \"Here are 10 customers with requested fields.\",\n  \"columns\": [\"CustomerId\", \"CustomerNameToken\", \"City\", \"LoyaltyTier\"],\n  \"rows\": [\n    [1, \"CU_e995b7\", \"San Francisco\", \"Gold\"]\n  ],\n  \"warnings\": [],\n  \"notes\": [\n    \"Names are shown as protected tokens.\",\n    \"Email and phone were not requested, so they are not shown.\"\n  ]\n}"
+      },
+      {
+        name: "Final Chat UI output",
+        category: "Final response",
+        type: "final",
+        summary: "Shows the final protected answer to the user.",
+        receives: "Structured response from the API.",
+        does: "Renders the status, message, table, warnings, and notes in a predictable way.",
+        sends: "Final UI response:\nCustomerId | CustomerNameToken | City          | LoyaltyTier\n1          | CU_e995b7         | San Francisco | Gold\n\nNotes:\n- CustomerId remains unchanged.\n- Name is pseudonymized.\n- Email and phone are not shown because the user did not ask for them."
+      }
+    ];
+
+    const canvas = document.getElementById("canvas");
+    const stepCounter = document.getElementById("stepCounter");
+    const panelTitle = document.getElementById("panelTitle");
+    const panelCategory = document.getElementById("panelCategory");
+    const panelSummary = document.getElementById("panelSummary");
+    const panelInput = document.getElementById("panelInput");
+    const panelDoes = document.getElementById("panelDoes");
+    const panelOutput = document.getElementById("panelOutput");
+    const progressBar = document.getElementById("progressBar");
+    const prevBtn = document.getElementById("prevBtn");
+    const nextBtn = document.getElementById("nextBtn");
+    const resetBtn = document.getElementById("resetBtn");
+    const playBtn = document.getElementById("playBtn");
+
+    let activeIndex = 0;
+    let timer = null;
+
+    function renderCanvas() {
+      canvas.innerHTML = "";
+      layers.forEach((layer, index) => {
+        const card = document.createElement("button");
+        card.type = "button";
+        card.className = `layer ${layer.type}`;
+        card.setAttribute("aria-label", `Step ${index + 1}: ${layer.name}`);
+        card.innerHTML = `
+          <span class="layer-number">${index + 1}</span>
+          <p class="layer-name">${layer.name}</p>
+          <p class="layer-note">${layer.category}</p>
+        `;
+        card.addEventListener("click", () => {
+          stopAutoplay();
+          setActive(index);
+        });
+        canvas.appendChild(card);
+      });
+    }
+
+    function setActive(index) {
+      activeIndex = Math.max(0, Math.min(index, layers.length - 1));
+      const layer = layers[activeIndex];
+      const cards = Array.from(document.querySelectorAll(".layer"));
+
+      cards.forEach((card, cardIndex) => {
+        card.classList.toggle("active", cardIndex === activeIndex);
+        card.classList.toggle("done", cardIndex < activeIndex);
+      });
+
+      stepCounter.textContent = `Step ${activeIndex + 1} of ${layers.length}`;
+      panelTitle.textContent = layer.name;
+      panelCategory.textContent = layer.category;
+      panelSummary.textContent = layer.summary;
+      panelInput.textContent = layer.receives;
+      panelDoes.textContent = layer.does;
+      panelOutput.textContent = layer.sends;
+      progressBar.style.width = `${((activeIndex + 1) / layers.length) * 100}%`;
+
+      prevBtn.disabled = activeIndex === 0;
+      nextBtn.disabled = activeIndex === layers.length - 1;
+    }
+
+    function nextStep() {
+      if (activeIndex < layers.length - 1) {
+        setActive(activeIndex + 1);
+      } else {
+        stopAutoplay();
+      }
+    }
+
+    function stopAutoplay() {
+      if (timer) {
+        clearInterval(timer);
+        timer = null;
+      }
+      playBtn.textContent = "Auto-play";
+    }
+
+    prevBtn.addEventListener("click", () => {
+      stopAutoplay();
+      setActive(activeIndex - 1);
+    });
+
+    nextBtn.addEventListener("click", () => {
+      stopAutoplay();
+      nextStep();
+    });
+
+    resetBtn.addEventListener("click", () => {
+      stopAutoplay();
+      setActive(0);
+    });
+
+    playBtn.addEventListener("click", () => {
+      if (timer) {
+        stopAutoplay();
+        return;
+      }
+      playBtn.textContent = "Pause";
+      if (activeIndex === layers.length - 1) {
+        setActive(0);
+      }
+      timer = setInterval(nextStep, 1800);
+    });
+
+    renderCanvas();
+    setActive(0);
+  </script>
+</body>
+</html>

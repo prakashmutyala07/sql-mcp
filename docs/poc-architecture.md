@@ -19,6 +19,12 @@ Reading the diagram in one pass:
 | Model | The OpenRouter LLM interprets the request, but it has no direct database access. |
 | Data access | DAB MCP tools expose approved describe, read, and aggregate operations through Microsoft Data API Builder. SQL Server access is read-only. |
 
+## Interactive Layer-by-Layer Query Flow
+
+Use this walkthrough to see what each layer receives, how it transforms the request or data, and what it sends to the next layer.
+
+[Open interactive query flow](./interactive-query-flow.html)
+
 ## Plain-English capabilities
 
 **PII Guardrail:** Protects sensitive values such as customer names, emails, phone numbers, and references.
