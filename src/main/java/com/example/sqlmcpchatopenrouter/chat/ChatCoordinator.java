@@ -2,6 +2,7 @@ package com.example.sqlmcpchatopenrouter.chat;
 
 import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -11,6 +12,7 @@ import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.ResponseEntity;
 import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
 import org.springframework.ai.chat.memory.ChatMemory;
+import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.metadata.Usage;
 import org.springframework.ai.converter.BeanOutputConverter;
 import org.springframework.ai.openai.OpenAiChatModel;
@@ -82,25 +84,30 @@ public class ChatCoordinator implements ChatOperations {
 
         SensitiveDataGuard.Session guardSession =
                 this.sensitiveDataGuard.newSession(step -> progressSink.progress("tool", step));
+        String protectedMessage = guardSession.protectInput(message);
         ToolCallback[] tools = guardSession.wrap(this.mcpToolCatalog.toolCallbacksOrEmpty());
         progressSink.progress("mcp", "Connected to DAB (" + tools.length + " tools).");
+
+        List<Message> memoryBeforeTurn = this.chatMemory.get(resolvedConversationId);
 
         String primary = this.properties.models().primary();
         String fallback = this.properties.models().fallback();
 
         try {
             progressSink.progress("model", "Reasoning with " + primary + "\u2026");
-            return complete(message, resolvedConversationId, primary, system, tools, guardSession, false);
+            return complete(protectedMessage, resolvedConversationId, primary, system, tools, guardSession, false);
         }
         catch (RuntimeException firstFailure) {
+            restoreMemory(resolvedConversationId, memoryBeforeTurn);
             logger.warn("Primary model call failed; retrying once. model={} cause={}", primary,
                     firstFailure.getClass().getSimpleName());
             progressSink.progress("retry", "Primary model failed \u2014 retrying once\u2026");
             sleepBeforeRetry();
             try {
-                return complete(message, resolvedConversationId, primary, system, tools, guardSession, false);
+                return complete(protectedMessage, resolvedConversationId, primary, system, tools, guardSession, false);
             }
             catch (RuntimeException retryFailure) {
+                restoreMemory(resolvedConversationId, memoryBeforeTurn);
                 if (!this.properties.execution().fallbackEnabled()) {
                     throw chatFailure("Primary model failed after one retry.", retryFailure);
                 }
@@ -108,9 +115,11 @@ public class ChatCoordinator implements ChatOperations {
                         retryFailure.getClass().getSimpleName());
                 progressSink.progress("fallback", "Falling back to " + fallback + "\u2026");
                 try {
-                    return complete(message, resolvedConversationId, fallback, system, tools, guardSession, true);
+                    return complete(protectedMessage, resolvedConversationId, fallback, system, tools, guardSession,
+                            true);
                 }
                 catch (RuntimeException fallbackFailure) {
+                    restoreMemory(resolvedConversationId, memoryBeforeTurn);
                     fallbackFailure.addSuppressed(retryFailure);
                     throw chatFailure("Primary and fallback models both failed.", fallbackFailure);
                 }
@@ -160,19 +169,18 @@ public class ChatCoordinator implements ChatOperations {
 
         logUsage(model, response.response(), System.nanoTime() - startedAt);
 
-        // Tokens go out to the model; real values come back only here, at the edge.
         ChatResponse.ModelAnswer raw = response.entity();
         ChatResponse.ModelAnswer restored = new ChatResponse.ModelAnswer(
                 raw == null ? ChatResponse.Status.ERROR : raw.status(),
-                raw == null ? "" : guardSession.detokenize(raw.answer()),
+                raw == null ? "" : guardSession.protectOutput(raw.answer()),
                 raw == null ? java.util.List.of() : raw.columns(),
                 raw == null ? java.util.List.of()
                         : raw.rows().stream()
-                                .map(row -> row.stream().map(guardSession::detokenize).toList())
+                                .map(row -> row.stream().map(guardSession::protectOutput).toList())
                                 .toList(),
                 raw != null && raw.partialResults(),
-                raw == null ? "" : guardSession.detokenize(raw.dataNotes()),
-                raw == null ? "" : guardSession.detokenize(raw.followUpQuestion()));
+                raw == null ? "" : guardSession.protectOutput(raw.dataNotes()),
+                raw == null ? "" : guardSession.protectOutput(raw.followUpQuestion()));
         // Tool use is measured, not taken on trust from model output.
         return ChatResponse.from(conversationId, model, fallbackUsed, restored, guardSession.toolInvocations() > 0);
     }
@@ -225,6 +233,13 @@ public class ChatCoordinator implements ChatOperations {
         }
         catch (InterruptedException ex) {
             Thread.currentThread().interrupt();
+        }
+    }
+
+    private void restoreMemory(String conversationId, List<Message> messages) {
+        this.chatMemory.clear(conversationId);
+        if (!messages.isEmpty()) {
+            this.chatMemory.add(conversationId, messages);
         }
     }
 

@@ -4,7 +4,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeSet;
-import java.util.regex.Pattern;
 
 import org.springframework.util.StringUtils;
 
@@ -12,8 +11,6 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
 final class ToolCallIntent {
-
-    private static final Pattern FILTER_LITERAL = Pattern.compile("'[^']*'");
 
     private ToolCallIntent() {
     }
@@ -38,15 +35,17 @@ final class ToolCallIntent {
             Map<String, String> intent = new HashMap<>();
             for (String key : List.of("entity", "entityName", "filter", "$filter", "orderby", "select")) {
                 JsonNode value = args.get(key);
-                if (value != null && !value.isNull()) {
-                    String rendered = value.isString() ? value.stringValue() : value.toString();
-                    intent.put(key, FILTER_LITERAL.matcher(rendered).replaceAll("'?'"));
+                if (value == null || value.isNull()) {
+                    continue;
+                }
+                if (key.equals("filter") || key.equals("$filter")) {
+                    intent.put(key, "<redacted>");
+                }
+                else {
+                    intent.put(key, value.isString() ? value.stringValue() : value.toString());
                 }
             }
-            if (intent.isEmpty()) {
-                return "keys=" + new TreeSet<>(args.propertyNames());
-            }
-            return intent.toString();
+            return intent.isEmpty() ? "keys=" + new TreeSet<>(args.propertyNames()) : intent.toString();
         }
         catch (RuntimeException ex) {
             return "<unparseable>";
@@ -57,7 +56,7 @@ final class ToolCallIntent {
         try {
             JsonNode args = objectMapper.readTree(toolInput);
             JsonNode node = args.get("entity") != null ? args.get("entity") : args.get("entityName");
-            return (node != null && node.isString()) ? node.stringValue() : null;
+            return node != null && node.isString() ? node.stringValue() : null;
         }
         catch (RuntimeException ex) {
             return null;

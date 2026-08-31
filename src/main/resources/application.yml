@@ -86,6 +86,12 @@ app:
     - entity: Customer
       field: Phone
       prefix: PH
+    - entity: Payment
+      field: TransactionReference
+      prefix: TX
+    - entity: Shipment
+      field: TrackingNumber
+      prefix: TR
 
 management:
   endpoints:
