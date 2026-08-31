@@ -6,101 +6,21 @@ This proof of concept (POC) lets business users ask natural-language questions a
 
 ## Architecture at a glance
 
-```mermaid
-flowchart TB
-    subgraph ACCESS["User Access"]
-        direction LR
-        USER([Business User]) --> UI["User Interface<br/>(Chat)"]
-        UI -. "Future production" .-> AUTH["Authentication / OIDC<br/>(Not in current POC)"]
-    end
+![Read-only SQL MCP AI Assistant — POC architecture](sql-mcp-poc-architecture.png)
 
-    UI --> API["API / ChatController"]
+The editable source diagram is available at [docs/sql-mcp-poc-architecture.drawio](sql-mcp-poc-architecture.drawio). Open it with [diagrams.net](https://app.diagrams.net) or the draw.io VS Code extension. A vector version is also available at [docs/sql-mcp-poc-architecture.svg](sql-mcp-poc-architecture.svg) for slides and printed handouts.
 
-    subgraph INTELLIGENCE[" "]
-        direction LR
+The dotted green boundary is the current **single-coordinator Spring Boot runtime**. It is not a multi-agent design. The yellow LLM sits outside that boundary, and the teal layer at the bottom is the only route to SQL Server data.
 
-        subgraph RUNTIME["Spring Boot AI Application / Agent Runtime"]
-            direction LR
+Reading the diagram in one pass:
 
-            subgraph CORE["Single Lightweight Coordinator"]
-                direction TB
-                COORD[ChatCoordinator]
-                PROMPT["PromptProvider<br/>Strong System Instructions"]
-                RUNNER[ChatModelRunner]
-                CLIENT[Spring AI ChatClient]
-
-                COORD --> PROMPT --> RUNNER --> CLIENT
-            end
-
-            subgraph CONTROLS["Guardrails, Context & Output"]
-                direction TB
-                PII["SensitiveDataGuard<br/>Input / Output / Tool Results"]
-                MEMORY["Sanitized<br/>Conversation Memory"]
-                RESPONSE["Structured Response<br/>Summary / Table / Status"]
-            end
-
-            COORD --> PII --> RUNNER
-            COORD <--> MEMORY
-            RUNNER --> RESPONSE
-        end
-
-        LLM["OpenRouter LLM<br/>Primary / Fallback"]
-    end
-
-    API --> COORD
-    CLIENT <--> LLM
-    RESPONSE --> API
-
-    subgraph DATA["Controlled Data Access"]
-        direction TB
-
-        subgraph TOOLS["DAB MCP Tools — Approved Read Operations"]
-            direction LR
-            DESCRIBE[describe_entities]
-            READ[read_records]
-            AGGREGATE[aggregate_records]
-        end
-
-        DAB[Microsoft Data API Builder]
-        SQL[("SQL Server<br/>Read-only Access")]
-
-        DESCRIBE --> DAB
-        READ --> DAB
-        AGGREGATE --> DAB
-        DAB --> SQL
-    end
-
-    CLIENT -->|Guarded tool callbacks| DESCRIBE
-    CLIENT -->|Guarded tool callbacks| READ
-    CLIENT -->|Guarded tool callbacks| AGGREGATE
-    DAB -. "Tool results protected before model use" .-> PII
-
-    classDef ui fill:#dbeafe,stroke:#60a5fa,color:#0f172a,stroke-width:2px;
-    classDef future fill:#eff6ff,stroke:#60a5fa,color:#475569,stroke-width:2px,stroke-dasharray:6 4;
-    classDef runtime fill:#dcfce7,stroke:#16a34a,color:#052e16,stroke-width:2px;
-    classDef llm fill:#fef3c7,stroke:#eab308,color:#422006,stroke-width:2px;
-    classDef security fill:#f3e8ff,stroke:#a855f7,color:#3b0764,stroke-width:2px;
-    classDef support fill:#fff7ed,stroke:#f97316,color:#431407,stroke-width:2px;
-    classDef data fill:#ecfdf5,stroke:#10b981,color:#022c22,stroke-width:2px;
-
-    class USER,UI,API ui;
-    class AUTH future;
-    class COORD,PROMPT,RUNNER,CLIENT runtime;
-    class LLM llm;
-    class PII security;
-    class MEMORY,RESPONSE support;
-    class DESCRIBE,READ,AGGREGATE,DAB,SQL data;
-
-    style ACCESS fill:#f8fbff,stroke:#bfdbfe,stroke-width:1px
-    style INTELLIGENCE fill:none,stroke:none
-    style RUNTIME fill:#f7fff9,stroke:#10b981,stroke-width:2px,stroke-dasharray:8 5
-    style CORE fill:#f0fdf4,stroke:#86efac,stroke-width:1px
-    style CONTROLS fill:#fffaf5,stroke:#fdba74,stroke-width:1px
-    style DATA fill:#f8fafc,stroke:#94a3b8,stroke-width:2px
-    style TOOLS fill:#f0fdf4,stroke:#6ee7b7,stroke-width:1px
-```
-
-The dotted boundary is the current **single-coordinator Spring Boot runtime**. It is not a multi-agent design. The yellow LLM is external to that runtime, and the lower layer is the only route to SQL Server data.
+| Band | What it shows |
+|---|---|
+| Top | The business user, the chat UI, and authentication as a future production capability. |
+| API | The ChatController that validates requests and returns results. |
+| Dotted green box | The Spring Boot agent runtime: coordinator, prompt, model runner, chat client, PII guardrail, sanitized memory, and structured response. |
+| Right | The OpenRouter LLM, external to the runtime and with no database connection. |
+| Bottom | The approved DAB MCP tools, Microsoft Data API Builder, and read-only SQL Server. |
 
 ## Runtime flow
 
