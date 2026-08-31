@@ -16,7 +16,7 @@ import javax.crypto.spec.SecretKeySpec;
 
 import org.springframework.util.StringUtils;
 
-final class SensitiveTokenStore {
+public final class SensitiveTokenStore {
 
     private static final Pattern TOKEN_PATTERN = Pattern.compile("\\b([A-Z]{2,8})_([0-9a-f]{6,12})\\b");
 
@@ -28,17 +28,17 @@ final class SensitiveTokenStore {
         this.secretKey = secretKey;
     }
 
-    int size() {
+    public int size() {
         return this.tokenToValue.size();
     }
 
-    Set<String> prefixes() {
+    public Set<String> prefixes() {
         return this.tokenToValue.keySet().stream()
                 .map(token -> token.substring(0, token.indexOf('_')))
                 .collect(Collectors.toCollection(java.util.TreeSet::new));
     }
 
-    Map<String, String> snapshot() {
+    public Map<String, String> snapshot() {
         return new LinkedHashMap<>(this.tokenToValue);
     }
 

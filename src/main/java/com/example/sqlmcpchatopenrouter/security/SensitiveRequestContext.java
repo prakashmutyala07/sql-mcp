@@ -6,12 +6,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.ai.tool.ToolCallback;
 import org.springframework.util.StringUtils;
 
-import com.example.sqlmcpchatopenrouter.config.SensitiveLoggingPolicy;
+import com.example.sqlmcpchatopenrouter.trace.LocalAiTraceLogger;
 
 import tools.jackson.databind.ObjectMapper;
 
@@ -19,8 +17,6 @@ import tools.jackson.databind.ObjectMapper;
  * Per-request sensitive-data state. One instance per chat turn; discarded when the turn ends.
  */
 public final class SensitiveRequestContext {
-
-    private static final Logger logger = LoggerFactory.getLogger(SensitiveDataGuard.class);
 
     private final SensitiveTokenStore tokens;
 
@@ -33,7 +29,7 @@ public final class SensitiveRequestContext {
 
     private final ObjectMapper objectMapper;
 
-    private final SensitiveLoggingPolicy sensitiveLoggingPolicy;
+    private final LocalAiTraceLogger traceLogger;
 
     private final Map<String, String> prefixByField;
 
@@ -42,13 +38,13 @@ public final class SensitiveRequestContext {
     private final SensitivePayloadProtector payloadProtector;
 
     SensitiveRequestContext(String requestId, java.util.function.Consumer<String> onStep, byte[] secretKey,
-            ObjectMapper objectMapper, SensitiveLoggingPolicy sensitiveLoggingPolicy, Map<String, String> prefixByField,
+            ObjectMapper objectMapper, LocalAiTraceLogger traceLogger, Map<String, String> prefixByField,
             PiiDetector piiDetector, SensitivePayloadProtector payloadProtector) {
         this.requestId = requestId;
         this.onStep = onStep;
         this.tokens = new SensitiveTokenStore(secretKey);
         this.objectMapper = objectMapper;
-        this.sensitiveLoggingPolicy = sensitiveLoggingPolicy;
+        this.traceLogger = traceLogger;
         this.prefixByField = prefixByField;
         this.piiDetector = piiDetector;
         this.payloadProtector = payloadProtector;
@@ -59,47 +55,18 @@ public final class SensitiveRequestContext {
         ToolCallback[] wrapped = new ToolCallback[delegates.length];
         for (int i = 0; i < delegates.length; i++) {
             wrapped[i] = new SecureMcpToolCallback(delegates[i], this, this.objectMapper,
-                    this.payloadProtector, this.sensitiveLoggingPolicy);
+                    this.payloadProtector, this.traceLogger);
         }
         return wrapped;
     }
 
     /** Removes recognizable PII before the user message reaches memory or the model. */
     public String protectInput(String text) {
-        long detectionStartedAt = System.nanoTime();
         Map<String, String> existingTokens = this.tokens.snapshot();
-        int before = tokenCount();
         String protectedText = this.piiDetector.protect(text, this.tokens, this.prefixByField);
-        int detected = tokenCount() - before;
-        logger.info("[STEP 3 - PII PROTECTION] requestId={} protected={} entities={} tokenTypes={} "
-                + "durationMs={}", this.requestId, detected > 0, detected, this.tokens.prefixes(),
-                elapsedMillis(detectionStartedAt));
-        if (logger.isDebugEnabled()) {
-            logger.debug("""
-                    ------------------------------------------------------------
-                    [STEP 3 - PII PROTECTION] requestId={}
-
-                    INPUT
-                    {}
-
-                    DETECTED
-                    {}
-
-                    TOKEN MAP
-                    {}
-
-                    OUTPUT
-                    {}
-                    ------------------------------------------------------------""", this.requestId,
-                    this.sensitiveLoggingPolicy.sensitiveLoggingEnabled() ? text : "<raw input hidden>",
-                    this.sensitiveLoggingPolicy.sensitiveLoggingEnabled()
-                            ? detectedEntityValues(this.tokens, existingTokens)
-                            : "entities=" + detected + " tokenTypes=" + this.tokens.prefixes(),
-                    this.sensitiveLoggingPolicy.sensitiveLoggingEnabled()
-                            ? inputTokenMap(this.tokens, existingTokens)
-                            : "raw values hidden; protected tokens=" + newlyCreatedTokens(this.tokens, existingTokens),
-                    protectedText);
-        }
+        this.traceLogger.tracePiiProtection(this.requestId, text,
+                this.traceLogger.describeNewTokens(this.tokens, existingTokens),
+                inputTokenMap(this.tokens, existingTokens), protectedText);
         return protectedText;
     }
 
@@ -150,6 +117,10 @@ public final class SensitiveRequestContext {
         return this.requestId;
     }
 
+    LocalAiTraceLogger traceLogger() {
+        return this.traceLogger;
+    }
+
     static String detectedEntityValues(SensitiveTokenStore tokens, Map<String, String> existingTokens) {
         Map<String, String> values = newTokenSnapshot(tokens, existingTokens);
         return values.isEmpty() ? "none" : values.entrySet().stream()
@@ -158,7 +129,7 @@ public final class SensitiveRequestContext {
                 .collect(Collectors.joining("\n"));
     }
 
-    private static String inputTokenMap(SensitiveTokenStore tokens, Map<String, String> existingTokens) {
+    static String inputTokenMap(SensitiveTokenStore tokens, Map<String, String> existingTokens) {
         Map<String, String> values = newTokenSnapshot(tokens, existingTokens);
         return values.isEmpty() ? "none" : values.entrySet().stream()
                 .map(entry -> entry.getValue() + " -> " + entry.getKey())
@@ -177,7 +148,4 @@ public final class SensitiveRequestContext {
                         (first, second) -> first, LinkedHashMap::new));
     }
 
-    private static long elapsedMillis(long startedAtNanos) {
-        return (System.nanoTime() - startedAtNanos) / 1_000_000L;
-    }
 }

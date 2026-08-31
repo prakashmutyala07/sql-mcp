@@ -11,7 +11,7 @@ import org.springframework.ai.tool.definition.ToolDefinition;
 import org.springframework.mock.env.MockEnvironment;
 
 import com.example.sqlmcpchatopenrouter.config.AppProperties;
-import com.example.sqlmcpchatopenrouter.config.SensitiveLoggingPolicy;
+import com.example.sqlmcpchatopenrouter.trace.LocalAiTraceLogger;
 
 import tools.jackson.databind.json.JsonMapper;
 
@@ -33,7 +33,7 @@ class SensitiveDataGuardTests {
     private final AppProperties properties = properties();
 
     private final SensitiveDataGuard guard =
-            new SensitiveDataGuard(this.properties, JsonMapper.builder().build(), loggingPolicy(this.properties));
+            new SensitiveDataGuard(this.properties, JsonMapper.builder().build(), traceLogger(this.properties));
 
     private static AppProperties properties() {
         return new AppProperties(
@@ -43,13 +43,14 @@ class SensitiveDataGuardTests {
                 new AppProperties.Memory(20),
                 new AppProperties.Security("unit-test-secret"),
                 new AppProperties.Logging(false),
+                new AppProperties.Ai(new AppProperties.Trace(false, false, 20_000)),
                 List.of(new AppProperties.SensitiveField("Customer", "FullName", "CU"),
                         new AppProperties.SensitiveField("Customer", "Email", "EM"),
                         new AppProperties.SensitiveField("Customer", "Phone", "PH")));
     }
 
-    private static SensitiveLoggingPolicy loggingPolicy(AppProperties properties) {
-        return new SensitiveLoggingPolicy(properties, new MockEnvironment());
+    private static LocalAiTraceLogger traceLogger(AppProperties properties) {
+        return new LocalAiTraceLogger(properties, new MockEnvironment());
     }
 
     private static ToolCallback stubCallback(String payload) {

@@ -6,10 +6,11 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 
 @ConfigurationProperties("app")
 public record AppProperties(Models models, Execution execution, Memory memory,
-        Security security, Logging logging, List<SensitiveField> sensitiveFields) {
+        Security security, Logging logging, Ai ai, List<SensitiveField> sensitiveFields) {
 
     public AppProperties {
         logging = logging == null ? new Logging(false) : logging;
+        ai = ai == null ? new Ai(null) : ai;
         sensitiveFields = sensitiveFields == null ? List.of() : List.copyOf(sensitiveFields);
     }
 
@@ -39,6 +40,20 @@ public record AppProperties(Models models, Execution execution, Memory memory,
     }
 
     public record Logging(boolean logSensitiveData) {
+    }
+
+    public record Ai(Trace trace) {
+
+        public Ai {
+            trace = trace == null ? new Trace(false, false, 20_000) : trace;
+        }
+    }
+
+    public record Trace(boolean enabled, boolean includeSensitiveValues, Integer maxPayloadChars) {
+
+        public Trace {
+            maxPayloadChars = maxPayloadChars == null || maxPayloadChars < 1 ? 20_000 : maxPayloadChars;
+        }
     }
 
     /**

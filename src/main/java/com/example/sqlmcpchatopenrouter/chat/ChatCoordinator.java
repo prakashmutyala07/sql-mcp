@@ -16,6 +16,7 @@ import org.springframework.util.StringUtils;
 import com.example.sqlmcpchatopenrouter.mcp.McpToolCatalog;
 import com.example.sqlmcpchatopenrouter.security.SensitiveDataGuard;
 import com.example.sqlmcpchatopenrouter.security.SensitiveRequestContext;
+import com.example.sqlmcpchatopenrouter.trace.LocalAiTraceLogger;
 
 /** Coordinates a chat turn; specialized collaborators own prompts, privacy, tools, and model policy. */
 @Service
@@ -33,13 +34,17 @@ public class ChatCoordinator implements ChatOperations {
 
     private final ChatModelRunner modelRunner;
 
+    private final LocalAiTraceLogger traceLogger;
+
     public ChatCoordinator(McpToolCatalog mcpToolCatalog, ChatMemory chatMemory,
-            SensitiveDataGuard sensitiveDataGuard, PromptProvider promptProvider, ChatModelRunner modelRunner) {
+            SensitiveDataGuard sensitiveDataGuard, PromptProvider promptProvider, ChatModelRunner modelRunner,
+            LocalAiTraceLogger traceLogger) {
         this.mcpToolCatalog = mcpToolCatalog;
         this.chatMemory = chatMemory;
         this.sensitiveDataGuard = sensitiveDataGuard;
         this.promptProvider = promptProvider;
         this.modelRunner = modelRunner;
+        this.traceLogger = traceLogger;
     }
 
     @Override
@@ -55,6 +60,7 @@ public class ChatCoordinator implements ChatOperations {
         long requestStartedAt = System.nanoTime();
 
         progressSink.progress("prepare", "Preparing a safe database request\u2026");
+        this.traceLogger.traceRawUserRequest(requestId, message);
         SensitiveRequestContext guardSession =
                 this.sensitiveDataGuard.newSession(requestId, step -> progressSink.progress("tool", step));
         String protectedMessage = guardSession.protectInput(message);
@@ -69,39 +75,17 @@ public class ChatCoordinator implements ChatOperations {
             ChatResponse response = ChatResponse.from(resolvedConversationId, result.model(), result.fallbackUsed(),
                     result.answer(), guardSession.toolInvocations() > 0);
             storeSanitizedTurn(resolvedConversationId, protectedMessage, response);
-            logger.info("[STEP 8 - RESPONSE / MEMORY] requestId={} conversationId={} status={} rows={} "
+            logger.info("Chat response structured requestId={} conversationId={} status={} rows={} "
                     + "memorySanitized=true durationMs={}", requestId, resolvedConversationId,
                     response.status(), response.rows().size(), elapsedMillis(structuredStartedAt));
-            if (logger.isDebugEnabled()) {
-                logger.debug("""
-                        ------------------------------------------------------------
-                        [STEP 8 - RESPONSE / MEMORY] requestId={}
-
-                        STRUCTURED RESPONSE
-
-                        INPUT FROM MODEL
-                        {}
-
-                        OUTPUT ChatResponse
-                        {}
-
-                        MEMORY OUTPUT
-
-                        USER:
-                        {}
-
-                        ASSISTANT:
-                        {}
-                        ------------------------------------------------------------""", requestId,
-                        result.protectedModelOutput(), response, protectedMessage, memoryContent(response));
-            }
             ChatResponse uiResponse = revealForTrustedLocalDisplay(response, guardSession);
-            logger.debug("[STEP 8 - RESPONSE / MEMORY] requestId={} totalChatDurationMs={}", requestId,
+            this.traceLogger.traceFinalUiResponse(requestId, response, uiResponse);
+            logger.debug("Chat request completed requestId={} totalChatDurationMs={}", requestId,
                     elapsedMillis(requestStartedAt));
             return uiResponse;
         }
         catch (RuntimeException ex) {
-            logger.error("[STEP 8 - RESPONSE / MEMORY] requestId={} conversationId={} failed errorType={} durationMs={}",
+            logger.error("Chat request failed requestId={} conversationId={} errorType={} durationMs={}",
                     requestId, resolvedConversationId, ex.getClass().getSimpleName(),
                     elapsedMillis(requestStartedAt));
             throw ex;

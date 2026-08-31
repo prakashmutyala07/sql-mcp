@@ -1,9 +1,5 @@
 package com.example.sqlmcpchatopenrouter.security;
 
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.stream.Collectors;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.model.ToolContext;
@@ -12,7 +8,7 @@ import org.springframework.ai.tool.definition.ToolDefinition;
 import org.springframework.ai.tool.metadata.ToolMetadata;
 import org.springframework.util.StringUtils;
 
-import com.example.sqlmcpchatopenrouter.config.SensitiveLoggingPolicy;
+import com.example.sqlmcpchatopenrouter.trace.LocalAiTraceLogger;
 
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
@@ -33,15 +29,15 @@ final class SecureMcpToolCallback implements ToolCallback {
 
     private final SensitivePayloadProtector payloadProtector;
 
-    private final SensitiveLoggingPolicy sensitiveLoggingPolicy;
+    private final LocalAiTraceLogger traceLogger;
 
     SecureMcpToolCallback(ToolCallback delegate, SensitiveRequestContext session, ObjectMapper objectMapper,
-            SensitivePayloadProtector payloadProtector, SensitiveLoggingPolicy sensitiveLoggingPolicy) {
+            SensitivePayloadProtector payloadProtector, LocalAiTraceLogger traceLogger) {
         this.delegate = delegate;
         this.session = session;
         this.objectMapper = objectMapper;
         this.payloadProtector = payloadProtector;
-        this.sensitiveLoggingPolicy = sensitiveLoggingPolicy;
+        this.traceLogger = traceLogger;
     }
 
     @Override
@@ -69,100 +65,26 @@ final class SecureMcpToolCallback implements ToolCallback {
         this.session.recordToolInvocation();
         this.session.onStep(ToolCallIntent.describeStep(this.objectMapper, name, toolInput));
         String detokenizedToolInput = this.session.detokenize(toolInput);
-        int resolvedTokens = SensitiveTokenStore.resolvedTokenCount(toolInput, detokenizedToolInput);
-        logger.info("[STEP 5 - MCP TOOL] requestId={} tool={} approved=true resolvedTokens={}",
-                this.session.requestId(), name, resolvedTokens);
-        if (logger.isDebugEnabled()) {
-            logger.debug("""
-                    ------------------------------------------------------------
-                    [STEP 5 - MCP TOOL] requestId={}
-
-                    INPUT FROM MODEL
-                    Tool:
-                    {}
-
-                    Arguments:
-                    {}
-
-                    TOKEN RESOLUTION
-                    {}
-
-                    OUTPUT TO DAB
-                    {}
-                    ------------------------------------------------------------""", this.session.requestId(), name, toolInput,
-                    this.sensitiveLoggingPolicy.sensitiveLoggingEnabled()
-                            ? tokenResolutionMap(toolInput) : "resolvedTokens=" + resolvedTokens,
-                    this.sensitiveLoggingPolicy.sensitiveLoggingEnabled()
-                            ? detokenizedToolInput : protectedDabBoundaryView(toolInput));
-        }
+        this.traceLogger.traceModelToolRequest(this.session.requestId(), name, toolInput);
+        this.traceLogger.traceToolRequestAfterDetokenization(this.session.requestId(), toolInput,
+                detokenizedToolInput, this.traceLogger.describeTokenResolution(toolInput, this.session.tokens()));
         long startedAt = System.nanoTime();
         String raw;
         try {
-            if (logger.isDebugEnabled()) {
-                logger.debug("""
-                        ------------------------------------------------------------
-                        [STEP 6 - DAB / SQL] requestId={}
-
-                        INPUT TO DAB
-
-                        Tool:
-                        {}
-
-                        Entity:
-                        {}
-
-                        Arguments:
-                        {}
-
-                        SQL Executed:
-                        Actual SQL is generated/executed inside Microsoft DAB and is not available at the Spring application logging boundary.
-                        ------------------------------------------------------------""", this.session.requestId(), name,
-                        ToolCallIntent.entityName(this.objectMapper, detokenizedToolInput),
-                        this.sensitiveLoggingPolicy.sensitiveLoggingEnabled()
-                                ? detokenizedToolInput : protectedDabBoundaryView(toolInput));
-            }
             raw = invocation.call(detokenizedToolInput);
         }
         catch (RuntimeException ex) {
-            logger.error("[STEP 6 - DAB / SQL] requestId={} tool={} failed errorType={}",
+            logger.error("MCP/DAB tool failed requestId={} tool={} errorType={}",
                     this.session.requestId(), name, ex.getClass().getSimpleName());
             throw ex;
         }
         long latencyMs = (System.nanoTime() - startedAt) / 1_000_000L;
         int rows = resultRowCount(raw);
-        logger.info("[STEP 6 - DAB / SQL] requestId={} tool={} entity={} rows={} durationMs={}",
-                this.session.requestId(), name, ToolCallIntent.entityName(this.objectMapper, detokenizedToolInput),
-                rowsDescription(rows), latencyMs);
-        if (logger.isDebugEnabled()) {
-            logger.debug("""
-                    ------------------------------------------------------------
-                    [STEP 6 - DAB / SQL] requestId={}
-
-                    OUTPUT FROM DAB / DATABASE
-
-                    rows={}
-                    durationMs={}
-
-                    {}
-                    ------------------------------------------------------------""", this.session.requestId(), rowsDescription(rows),
-                    latencyMs, this.sensitiveLoggingPolicy.sensitiveLoggingEnabled()
-                            ? raw : "<raw database result hidden until Step 7 protected output>");
-        }
-        return this.payloadProtector.protect(raw, this.session.tokens(), this.session.requestId());
-    }
-
-    private String tokenResolutionMap(String toolInput) {
-        Map<String, String> matches = this.session.tokenSnapshot().entrySet().stream()
-                .filter(entry -> toolInput != null && toolInput.contains(entry.getKey()))
-                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue,
-                        (first, second) -> first, LinkedHashMap::new));
-        return matches.isEmpty() ? "none" : matches.entrySet().stream()
-                .map(entry -> entry.getKey() + " -> " + entry.getValue())
-                .collect(Collectors.joining("\n"));
-    }
-
-    private String protectedDabBoundaryView(String protectedToolInput) {
-        return protectedToolInput == null ? "" : protectedToolInput;
+        this.traceLogger.traceRawToolResult(this.session.requestId(), name,
+                ToolCallIntent.entityName(this.objectMapper, detokenizedToolInput), rows, latencyMs, raw);
+        String protectedPayload = this.payloadProtector.protect(raw, this.session.tokens(), this.session.requestId());
+        this.traceLogger.traceProtectedToolResult(this.session.requestId(), protectedPayload);
+        return protectedPayload;
     }
 
     private int resultRowCount(String payload) {

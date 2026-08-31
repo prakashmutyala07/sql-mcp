@@ -1,6 +1,5 @@
 package com.example.sqlmcpchatopenrouter.chat;
 
-import java.util.Arrays;
 import java.util.List;
 
 import org.slf4j.Logger;
@@ -18,6 +17,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import com.example.sqlmcpchatopenrouter.config.AppProperties;
 import com.example.sqlmcpchatopenrouter.security.SensitiveRequestContext;
+import com.example.sqlmcpchatopenrouter.trace.LocalAiTraceLogger;
 import com.openai.errors.OpenAIInvalidDataException;
 import com.openai.errors.RateLimitException;
 
@@ -42,12 +42,16 @@ public class ChatModelRunner {
 
     private final AppProperties properties;
 
+    private final LocalAiTraceLogger traceLogger;
+
     private final BeanOutputConverter<ChatResponse.ModelAnswer> answerConverter =
             new BeanOutputConverter<>(ChatResponse.ModelAnswer.class);
 
-    public ChatModelRunner(ChatClient.Builder chatClientBuilder, AppProperties properties) {
+    public ChatModelRunner(ChatClient.Builder chatClientBuilder, AppProperties properties,
+            LocalAiTraceLogger traceLogger) {
         this.chatClient = chatClientBuilder.build();
         this.properties = properties;
+        this.traceLogger = traceLogger;
         logger.info("Provider: OpenAI");
         logger.info("Primary model: {}", properties.models().primary());
         logger.info("Fallback model: {}", properties.models().fallback());
@@ -102,27 +106,7 @@ public class ChatModelRunner {
             SensitiveRequestContext guardSession, String model, boolean fallbackUsed, String requestId) {
         long startedAt = System.nanoTime();
         org.springframework.ai.chat.model.ChatResponse response;
-        if (logger.isDebugEnabled()) {
-            logger.debug("""
-                    ------------------------------------------------------------
-                    [STEP 4 - AI MODEL] requestId={}
-
-                    INPUT TO MODEL
-
-                    SYSTEM INSTRUCTIONS
-                    {}
-
-                    SANITIZED CONVERSATION CONTEXT
-                    {}
-
-                    USER MESSAGE
-                    {}
-
-                    AVAILABLE TOOLS
-                    {}
-                    ------------------------------------------------------------""", requestId, systemPrompt(systemPrompt),
-                    history.stream().map(Message::getText).toList(), message, toolNames(tools));
-        }
+        this.traceLogger.traceLlmRequest(requestId, "OpenAI", model, systemPrompt(systemPrompt), history, message, tools);
         try {
             response = this.chatClient.prompt()
                     .system(systemPrompt(systemPrompt))
@@ -141,15 +125,7 @@ public class ChatModelRunner {
         String content = response == null || response.getResult() == null
                 || response.getResult().getOutput() == null ? null : response.getResult().getOutput().getText();
         String protectedContent = guardSession.protectOutput(content);
-        if (logger.isDebugEnabled()) {
-            logger.debug("""
-                    ------------------------------------------------------------
-                    [STEP 4 - AI MODEL] requestId={}
-
-                    OUTPUT FROM MODEL
-                    {}
-                    ------------------------------------------------------------""", requestId, protectedContent);
-        }
+        this.traceLogger.traceFinalModelResponse(requestId, content, protectedContent);
         long structuredStartedAt = System.nanoTime();
         ChatResponse.ModelAnswer parsed;
         boolean parsedSuccessfully = true;
@@ -158,7 +134,7 @@ public class ChatModelRunner {
         }
         catch (RuntimeException ex) {
             parsedSuccessfully = false;
-            logger.warn("[STEP 8 - RESPONSE / MEMORY] requestId={} model={} parsed=false errorType={} durationMs={}",
+            logger.warn("Structured model response parse failed requestId={} model={} errorType={} durationMs={}",
                     requestId, model, ex.getClass().getSimpleName(), elapsedMillis(structuredStartedAt));
             parsed = new ChatResponse.ModelAnswer(ChatResponse.Status.ERROR, STRUCTURED_OUTPUT_ERROR,
                     List.of(), List.of(), false, "", "");
@@ -212,11 +188,11 @@ public class ChatModelRunner {
         long latencyMs = elapsedNanos / 1_000_000L;
         Usage usage = response != null && response.getMetadata() != null ? response.getMetadata().getUsage() : null;
         if (usage == null) {
-            logger.info("[STEP 4 - AI MODEL] requestId={} model={} tools={} durationMs={} tokens=unavailable",
+            logger.info("OpenAI request completed requestId={} model={} tools={} durationMs={} tokens=unavailable",
                     requestId, model, tools.length, latencyMs);
             return;
         }
-        logger.info("[STEP 4 - AI MODEL] requestId={} model={} tools={} durationMs={} promptTokens={} "
+        logger.info("OpenAI request completed requestId={} model={} tools={} durationMs={} promptTokens={} "
                 + "completionTokens={} totalTokens={}", requestId, model, tools.length, latencyMs, usage.getPromptTokens(),
                 usage.getCompletionTokens(), usage.getTotalTokens());
     }
@@ -226,13 +202,9 @@ public class ChatModelRunner {
     }
 
     private static void logModelFailure(ModelCallException failure, String requestId) {
-        logger.warn("[STEP 4 - AI MODEL] requestId={} provider=OpenAI request failed model={} errorType={} durationMs={}",
+        logger.warn("OpenAI request failed requestId={} model={} errorType={} durationMs={}",
                 requestId, failure.model(),
                 failure.getCause().getClass().getSimpleName(), failure.elapsedMs());
-    }
-
-    private static List<String> toolNames(ToolCallback[] tools) {
-        return Arrays.stream(tools).map(tool -> tool.getToolDefinition().name()).toList();
     }
 
     private static void sleepBeforeRetry() {

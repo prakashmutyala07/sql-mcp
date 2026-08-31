@@ -11,9 +11,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
 
-/**
- * Gates raw PII logging behind both an explicit property and a local/dev profile.
- */
+/** Backward-compatible facade for the local AI trace sensitive-value gate. */
 @Component
 public class SensitiveLoggingPolicy {
 
@@ -32,18 +30,16 @@ public class SensitiveLoggingPolicy {
 
     @PostConstruct
     void warnIfSensitiveLoggingWasRejected() {
-        if (requestedSensitiveLogging() && !isLocalOrDevProfile()) {
-            logger.warn("[STEP 3 - PII PROTECTION] app.logging.log-sensitive-data=true was ignored because "
-                    + "activeProfiles={} does not include local/dev", this.activeProfiles);
-        }
-        else if (sensitiveLoggingEnabled()) {
-            logger.warn("[STEP 3 - PII PROTECTION] LOCAL SENSITIVE DEBUG LOGGING ENABLED. Raw business PII may "
-                    + "appear in stage logs; secrets, credentials, and authorization data remain excluded.");
+        if (requestedSensitiveLogging()) {
+            logger.warn("app.logging.log-sensitive-data is deprecated and ignored. Use "
+                    + "app.ai.trace.enabled=true plus app.ai.trace.include-sensitive-values=true in a local/dev profile.");
         }
     }
 
     public boolean sensitiveLoggingEnabled() {
-        return requestedSensitiveLogging() && isLocalOrDevProfile();
+        return this.properties.ai().trace().enabled()
+                && this.properties.ai().trace().includeSensitiveValues()
+                && isLocalOrDevProfile();
     }
 
     private boolean requestedSensitiveLogging() {

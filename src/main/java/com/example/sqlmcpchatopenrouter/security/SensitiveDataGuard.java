@@ -12,7 +12,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
 import com.example.sqlmcpchatopenrouter.config.AppProperties;
-import com.example.sqlmcpchatopenrouter.config.SensitiveLoggingPolicy;
+import com.example.sqlmcpchatopenrouter.trace.LocalAiTraceLogger;
 
 import tools.jackson.databind.ObjectMapper;
 
@@ -31,7 +31,7 @@ public class SensitiveDataGuard {
 
     private final ObjectMapper objectMapper;
 
-    private final SensitiveLoggingPolicy sensitiveLoggingPolicy;
+    private final LocalAiTraceLogger traceLogger;
 
     /** Lower-cased field name -> token prefix. Matching is by field name across all entities. */
     private final Map<String, String> prefixByField;
@@ -43,9 +43,9 @@ public class SensitiveDataGuard {
     private final SensitivePayloadProtector payloadProtector;
 
     public SensitiveDataGuard(AppProperties properties, ObjectMapper objectMapper,
-            SensitiveLoggingPolicy sensitiveLoggingPolicy) {
+            LocalAiTraceLogger traceLogger) {
         this.objectMapper = objectMapper;
-        this.sensitiveLoggingPolicy = sensitiveLoggingPolicy;
+        this.traceLogger = traceLogger;
         this.prefixByField = properties.sensitiveFields().stream()
                 .collect(Collectors.toMap(field -> field.field().toLowerCase(),
                         AppProperties.SensitiveField::prefixOrDefault, (first, second) -> first));
@@ -56,8 +56,7 @@ public class SensitiveDataGuard {
         }
         this.secretKey = StringUtils.hasText(configured)
                 ? configured.getBytes(StandardCharsets.UTF_8) : new byte[0];
-        this.payloadProtector = new SensitivePayloadProtector(objectMapper, this.prefixByField,
-                sensitiveLoggingPolicy);
+        this.payloadProtector = new SensitivePayloadProtector(objectMapper, this.prefixByField);
         logger.info("Sensitive-field redaction active for {} field(s): {}", this.prefixByField.size(),
                 this.prefixByField.keySet());
     }
@@ -75,7 +74,7 @@ public class SensitiveDataGuard {
     /** @param onStep receives a short human-readable note each time a tool is about to run. */
     public SensitiveRequestContext newSession(String requestId, java.util.function.Consumer<String> onStep) {
         return new SensitiveRequestContext(StringUtils.hasText(requestId) ? requestId : "none", onStep,
-                this.secretKey, this.objectMapper, this.sensitiveLoggingPolicy, this.prefixByField,
+                this.secretKey, this.objectMapper, this.traceLogger, this.prefixByField,
                 this.piiDetector, this.payloadProtector);
     }
 

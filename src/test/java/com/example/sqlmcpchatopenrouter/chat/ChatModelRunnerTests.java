@@ -20,6 +20,7 @@ import org.springframework.web.server.ResponseStatusException;
 import com.example.sqlmcpchatopenrouter.config.AppProperties;
 import com.example.sqlmcpchatopenrouter.security.SensitiveDataGuard;
 import com.example.sqlmcpchatopenrouter.security.SensitiveRequestContext;
+import com.example.sqlmcpchatopenrouter.trace.LocalAiTraceLogger;
 import com.openai.core.http.Headers;
 import com.openai.errors.OpenAIInvalidDataException;
 import com.openai.errors.RateLimitException;
@@ -167,13 +168,13 @@ class ChatModelRunnerTests {
                 new AppProperties.Execution(true, primaryRetryEnabled, 1200, 0.1, Duration.ofSeconds(10),
                         responseFormat),
                 new AppProperties.Memory(20),
-                new AppProperties.Security("unit-test-secret"), new AppProperties.Logging(false), List.of());
-        com.example.sqlmcpchatopenrouter.config.SensitiveLoggingPolicy loggingPolicy =
-                new com.example.sqlmcpchatopenrouter.config.SensitiveLoggingPolicy(properties,
-                        new org.springframework.mock.env.MockEnvironment());
-        SensitiveDataGuard guard = new SensitiveDataGuard(properties, JsonMapper.builder().build(), loggingPolicy);
+                new AppProperties.Security("unit-test-secret"), new AppProperties.Logging(false),
+                new AppProperties.Ai(new AppProperties.Trace(false, false, 20_000)), List.of());
+        LocalAiTraceLogger traceLogger = new LocalAiTraceLogger(properties,
+                new org.springframework.mock.env.MockEnvironment());
+        SensitiveDataGuard guard = new SensitiveDataGuard(properties, JsonMapper.builder().build(), traceLogger);
         ChatModel model = responder::apply;
-        ChatModelRunner runner = new ChatModelRunner(ChatClient.builder(model), properties);
+        ChatModelRunner runner = new ChatModelRunner(ChatClient.builder(model), properties, traceLogger);
         return new Fixture(runner, guard.newSession());
     }
 

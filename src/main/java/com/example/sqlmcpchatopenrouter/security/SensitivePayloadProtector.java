@@ -8,8 +8,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.util.StringUtils;
 
-import com.example.sqlmcpchatopenrouter.config.SensitiveLoggingPolicy;
-
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.node.ArrayNode;
@@ -23,13 +21,9 @@ final class SensitivePayloadProtector {
 
     private final Map<String, String> prefixByField;
 
-    private final SensitiveLoggingPolicy sensitiveLoggingPolicy;
-
-    SensitivePayloadProtector(ObjectMapper objectMapper, Map<String, String> prefixByField,
-            SensitiveLoggingPolicy sensitiveLoggingPolicy) {
+    SensitivePayloadProtector(ObjectMapper objectMapper, Map<String, String> prefixByField) {
         this.objectMapper = objectMapper;
         this.prefixByField = prefixByField;
-        this.sensitiveLoggingPolicy = sensitiveLoggingPolicy;
     }
 
     String protect(String payload, SensitiveTokenStore tokens, String requestId) {
@@ -37,40 +31,12 @@ final class SensitivePayloadProtector {
             return payload;
         }
         try {
-            long startedAt = System.nanoTime();
-            Map<String, String> existingTokens = tokens.snapshot();
-            int before = tokens.size();
             JsonNode root = this.objectMapper.readTree(payload);
             walk(root, tokens);
-            String protectedPayload = this.objectMapper.writeValueAsString(root);
-            int protectedEntities = tokens.size() - before;
-            logger.info("[STEP 7 - RESULT PROTECTION] requestId={} protected={} sensitiveValues={} "
-                    + "tokenTypes={} durationMs={}", requestId, protectedEntities > 0, protectedEntities,
-                    tokens.prefixes(), elapsedMillis(startedAt));
-            if (logger.isDebugEnabled()) {
-                logger.debug("""
-                        ------------------------------------------------------------
-                        [STEP 7 - RESULT PROTECTION] requestId={}
-
-                        INPUT
-                        {}
-
-                        DETECTED
-                        {}
-
-                        OUTPUT TO MODEL
-                        {}
-                        ------------------------------------------------------------""", requestId,
-                        this.sensitiveLoggingPolicy.sensitiveLoggingEnabled() ? payload : "<raw database result hidden>",
-                        this.sensitiveLoggingPolicy.sensitiveLoggingEnabled()
-                                ? SensitiveRequestContext.detectedEntityValues(tokens, existingTokens)
-                                : "sensitiveValues=" + protectedEntities + " tokenTypes=" + tokens.prefixes(),
-                        protectedPayload);
-            }
-            return protectedPayload;
+            return this.objectMapper.writeValueAsString(root);
         }
         catch (RuntimeException ex) {
-            logger.warn("[STEP 7 - RESULT PROTECTION] requestId={} parseable=false action=withheld errorType={}",
+            logger.warn("Tool result protection failed requestId={} parseable=false action=withheld errorType={}",
                     requestId, ex.getClass().getSimpleName());
             return "{\"error\":\"Tool result could not be inspected for sensitive data and was withheld.\"}";
         }
@@ -122,7 +88,4 @@ final class SensitivePayloadProtector {
         }
     }
 
-    private static long elapsedMillis(long startedAtNanos) {
-        return (System.nanoTime() - startedAtNanos) / 1_000_000L;
-    }
 }

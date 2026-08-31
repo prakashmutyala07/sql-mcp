@@ -3,13 +3,15 @@ spring:
     active: local
 
 app:
-  logging:
-    # For local PII-flow validation only, run with:
-    # SPRING_PROFILES_ACTIVE=local APP_LOG_SENSITIVE_DATA=true
-    log-sensitive-data: ${APP_LOG_SENSITIVE_DATA:false}
+  ai:
+    trace:
+      # Local AI trace. Never enable with sensitive values outside local development.
+      enabled: ${APP_AI_TRACE_ENABLED:true}
+      include-sensitive-values: ${APP_AI_TRACE_INCLUDE_SENSITIVE_VALUES:true}
+      max-payload-chars: ${APP_AI_TRACE_MAX_PAYLOAD_CHARS:20000}
 
 logging:
   level:
-    com.example.sqlmcpchatopenrouter.chat: DEBUG
-    com.example.sqlmcpchatopenrouter.security: DEBUG
-    com.example.sqlmcpchatopenrouter.mcp: DEBUG
+    com.example.sqlmcpchatopenrouter.chat: INFO
+    com.example.sqlmcpchatopenrouter.security: INFO
+    com.example.sqlmcpchatopenrouter.mcp: INFO

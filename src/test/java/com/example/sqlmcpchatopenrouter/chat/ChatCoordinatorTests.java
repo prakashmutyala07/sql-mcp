@@ -20,9 +20,9 @@ import org.springframework.core.io.ByteArrayResource;
 import org.springframework.mock.env.MockEnvironment;
 
 import com.example.sqlmcpchatopenrouter.config.AppProperties;
-import com.example.sqlmcpchatopenrouter.config.SensitiveLoggingPolicy;
 import com.example.sqlmcpchatopenrouter.mcp.McpToolCatalog;
 import com.example.sqlmcpchatopenrouter.security.SensitiveDataGuard;
+import com.example.sqlmcpchatopenrouter.trace.LocalAiTraceLogger;
 
 import tools.jackson.databind.json.JsonMapper;
 
@@ -102,6 +102,7 @@ class ChatCoordinatorTests {
                 new AppProperties.Memory(20),
                 new AppProperties.Security("unit-test-secret"),
                 new AppProperties.Logging(localSensitiveMode),
+                new AppProperties.Ai(new AppProperties.Trace(localSensitiveMode, localSensitiveMode, 20_000)),
                 List.of(new AppProperties.SensitiveField("Customer", "Email", "EM"),
                         new AppProperties.SensitiveField("Customer", "Phone", "PH"),
                         new AppProperties.SensitiveField("Customer", "FullName", "CU")));
@@ -109,13 +110,14 @@ class ChatCoordinatorTests {
         if (localSensitiveMode) {
             environment.setActiveProfiles("local");
         }
-        SensitiveLoggingPolicy loggingPolicy = new SensitiveLoggingPolicy(properties, environment);
-        SensitiveDataGuard guard = new SensitiveDataGuard(properties, JsonMapper.builder().build(), loggingPolicy);
+        LocalAiTraceLogger traceLogger = new LocalAiTraceLogger(properties, environment);
+        SensitiveDataGuard guard = new SensitiveDataGuard(properties, JsonMapper.builder().build(), traceLogger);
         ChatMemory memory = MessageWindowChatMemory.builder().maxMessages(20).build();
         PromptProvider prompts = new PromptProvider(new ByteArrayResource(
                 "Date __CURRENT_DATE__, zone __TIME_ZONE__.".getBytes(StandardCharsets.UTF_8)));
-        ChatModelRunner runner = new ChatModelRunner(ChatClient.builder(model), properties);
-        ChatCoordinator coordinator = new ChatCoordinator(new EmptyToolCatalog(), memory, guard, prompts, runner);
+        ChatModelRunner runner = new ChatModelRunner(ChatClient.builder(model), properties, traceLogger);
+        ChatCoordinator coordinator = new ChatCoordinator(new EmptyToolCatalog(), memory, guard, prompts, runner,
+                traceLogger);
         return new Fixture(coordinator, memory);
     }
 
