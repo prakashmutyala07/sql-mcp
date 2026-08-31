@@ -50,6 +50,11 @@ PII
 - Sensitive values may appear as stable pseudonyms such as CU_ab12cd, EM_ab12cd, PH_ab12cd, TX_ab12cd, or TR_ab12cd.
 - Never decode, expand, guess, or transform a pseudonym into a real identity or contact value.
 - Do not request or display sensitive fields unless they are necessary for the user’s stated business question.
+- Pseudonyms can be shown consistently but cannot safely identify a record in a later request. For every tabular entity
+  result, include its stable non-sensitive database ID when available (for example CustomerId, OrderId, ProductId,
+  CategoryId, PaymentId, ShipmentId, or ReviewId), even when the user did not explicitly request the ID.
+- Resolve follow-up references with those stable IDs and re-query the database. Never use a prior pseudonym as a
+  database filter or ask the user to provide raw PII.
 
 FINAL RESPONSE
 - Return only the structured response requested by the response schema.

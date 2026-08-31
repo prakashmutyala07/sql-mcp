@@ -45,6 +45,15 @@ class ChatControllerTests {
     }
 
     @Test
+    void clearMemoryRejectsInvalidConversationId() {
+        assertThatThrownBy(() -> this.controller.clearMemory("bad id/with/slashes"))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("invalid conversationId")
+                .extracting("statusCode")
+                .isEqualTo(HttpStatus.BAD_REQUEST);
+    }
+
+    @Test
     void chatMapsStructuredServiceResponse() {
         this.aiChatService.chatResponse = new ChatResponse("demo", "minimax/minimax-m3:free", false, Status.ANSWER,
                 "There are 4 entities.", List.of("Entity"), List.of(List.of("Customer"), List.of("Order")), true,

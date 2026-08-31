@@ -86,9 +86,12 @@ ChatController -> ChatCoordinator -> PII guard -> Spring AI ChatClient
 ```
 
 Inbound email, phone, and explicitly identified customer-name values are pseudonymized before
-they reach conversation memory or OpenRouter. Sensitive DAB result fields are pseudonymized at
-the tool-callback boundary before the model sees them. Responses retain stable pseudonyms such
-as `CU_a3f9d2`; the application does not restore raw PII in the browser.
+they reach OpenRouter. Sensitive DAB result fields are pseudonymized at the tool-callback boundary
+before the model sees them. The application stores chat memory explicitly only after input
+protection and structured-output redaction; it does not use `MessageChatMemoryAdvisor`, which can
+otherwise capture raw model output before application-level redaction. Responses retain stable
+pseudonyms such as `CU_a3f9d2`, while entity tables include non-sensitive database IDs for reliable
+follow-ups. Raw PII and the request-scoped token map are not persisted.
 
 The POC has no end-user authentication or per-user authorization. DAB mutation tools are
 disabled and database access should use the `ecom_dab_reader` login created by the setup script.

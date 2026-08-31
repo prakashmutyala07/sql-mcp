@@ -19,10 +19,12 @@ class SensitiveDataGuardTests {
 
     private static final String REAL_EMAIL = "jane.doe@example.com";
 
+    private static final String REAL_PHONE = "415-555-0101";
+
     private static final String TOOL_RESULT = """
             {"value":[
-              {"CustomerId":1,"FullName":"Jane Doe","Email":"jane.doe@example.com","City":"Austin"},
-              {"CustomerId":2,"FullName":"Sam Patel","Email":"sam.patel@example.com","City":"Austin"}
+              {"CustomerId":1,"FullName":"Jane Doe","Email":"jane.doe@example.com","Phone":"415-555-0101","City":"Austin"},
+              {"CustomerId":2,"FullName":"Sam Patel","Email":"sam.patel@example.com","Phone":"212-555-0199","City":"Austin"}
             ]}
             """;
 
@@ -36,7 +38,8 @@ class SensitiveDataGuardTests {
                 new AppProperties.Openrouter("", "title"),
                 new AppProperties.Security("unit-test-secret"),
                 List.of(new AppProperties.SensitiveField("Customer", "FullName", "CU"),
-                        new AppProperties.SensitiveField("Customer", "Email", "EM")));
+                        new AppProperties.SensitiveField("Customer", "Email", "EM"),
+                        new AppProperties.SensitiveField("Customer", "Phone", "PH")));
     }
 
     private static ToolCallback stubCallback(String payload) {
@@ -65,9 +68,11 @@ class SensitiveDataGuardTests {
                 .as("raw sensitive values must never appear in what is sent to the LLM")
                 .doesNotContain(REAL_NAME)
                 .doesNotContain(REAL_EMAIL)
+                .doesNotContain(REAL_PHONE)
                 .doesNotContain("Sam Patel")
-                .doesNotContain("sam.patel@example.com");
-        assertThat(modelBoundPayload).containsPattern("CU_[0-9a-f]{6}").containsPattern("EM_[0-9a-f]{6}");
+                .doesNotContain("sam.patel@example.com", "212-555-0199");
+        assertThat(modelBoundPayload).containsPattern("CU_[0-9a-f]{6}")
+                .containsPattern("EM_[0-9a-f]{6}").containsPattern("PH_[0-9a-f]{6}");
         // Non-sensitive columns must survive, or aggregation questions break.
         assertThat(modelBoundPayload).contains("Austin").contains("\"CustomerId\":1");
     }
@@ -81,7 +86,7 @@ class SensitiveDataGuardTests {
         String second = guarded.call("{\"entity\":\"Customer\"}");
 
         assertThat(first).isEqualTo(second);
-        assertThat(session.tokenCount()).isEqualTo(4);
+        assertThat(session.tokenCount()).isEqualTo(6);
     }
 
     @Test
