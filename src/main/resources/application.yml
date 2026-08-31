@@ -58,8 +58,9 @@ app:
     primary-retry-enabled: ${APP_PRIMARY_RETRY_ENABLED:false}
     max-completion-tokens: ${APP_MAX_COMPLETION_TOKENS:1200}
     temperature: ${APP_TEMPERATURE:0.1}
-    request-timeout: ${APP_REQUEST_TIMEOUT:120s}
-    response-format: ${APP_RESPONSE_FORMAT:json_schema}
+    request-timeout: ${APP_REQUEST_TIMEOUT:30s}
+    # Supported values: json_schema (provider-enforced) and prompt_json (prompt-enforced).
+    response-format: ${APP_RESPONSE_FORMAT:prompt_json}
   memory:
     max-messages: ${APP_MEMORY_MAX_MESSAGES:20}
   openrouter:

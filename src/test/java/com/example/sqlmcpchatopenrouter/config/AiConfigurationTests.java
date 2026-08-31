@@ -22,4 +22,13 @@ class AiConfigurationTests {
 
         assertThat(chatMemory).isNotNull();
     }
+
+    @Test
+    void executionDefaultsFavorPromptJsonWithoutPrimaryRetry() {
+        AppProperties.Execution execution = new AppProperties.Execution(true, false, 1200, 0.1, null, null);
+
+        assertThat(execution.primaryRetryEnabled()).isFalse();
+        assertThat(execution.requestTimeout()).isEqualTo(java.time.Duration.ofSeconds(30));
+        assertThat(execution.responseFormat()).isEqualTo(AppProperties.ResponseFormat.PROMPT_JSON);
+    }
 }

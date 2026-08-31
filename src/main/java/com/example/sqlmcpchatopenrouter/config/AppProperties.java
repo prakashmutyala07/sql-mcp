@@ -19,8 +19,8 @@ public record AppProperties(Models models, Execution execution, Memory memory, O
             Double temperature, java.time.Duration requestTimeout, ResponseFormat responseFormat) {
 
         public Execution {
-            requestTimeout = requestTimeout == null ? java.time.Duration.ofSeconds(120) : requestTimeout;
-            responseFormat = responseFormat == null ? ResponseFormat.JSON_SCHEMA : responseFormat;
+            requestTimeout = requestTimeout == null ? java.time.Duration.ofSeconds(30) : requestTimeout;
+            responseFormat = responseFormat == null ? ResponseFormat.PROMPT_JSON : responseFormat;
         }
     }
 

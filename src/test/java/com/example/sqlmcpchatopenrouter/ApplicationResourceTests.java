@@ -62,6 +62,53 @@ class ApplicationResourceTests {
                 .contains("Incorrect columns: CustomerId, FullName, City, LoyaltyTier");
     }
 
+    @Test
+    void systemPromptAllowsExplicitlyRequestedNameOnlyAsASeparateTokenColumn() throws Exception {
+        String prompt = read("/prompts/sql-assistant-system.st");
+
+        assertThat(prompt)
+                .contains("If the user explicitly requests a sensitive field")
+                .contains("display only the pseudonymized/tokenized value")
+                .contains("When the user asks for \"name\" or \"customer name,\"")
+                .contains("use the exact FullName field only when describe_entities exposes")
+                .contains("label its pseudonymized values CustomerNameToken or FullNameToken")
+                .contains("Do not say that the name was excluded when the user explicitly asked for it")
+                .contains("User: \"List 10 customers with their name, city and loyalty tier.\"")
+                .contains("Correct columns: CustomerId, CustomerNameToken, City, LoyaltyTier")
+                .contains("omitting the requested name")
+                .contains("showing raw")
+                .contains("FullName");
+    }
+
+    @Test
+    void systemPromptKeepsStableIdsSeparateFromSensitiveTokens() throws Exception {
+        String prompt = read("/prompts/sql-assistant-system.st");
+
+        assertThat(prompt)
+                .contains("CustomerId, OrderId, and ProductId must be copied exactly from tool results")
+                .contains("Never invent")
+                .contains("replace, or relabel an ID")
+                .contains("never put a sensitive-field pseudonym such as CU_001 or CU_002")
+                .contains("in the CustomerId column or relabel a pseudonym as CustomerId");
+    }
+
+    @Test
+    void systemPromptRequiresExactDescribeEntitiesFieldNames() throws Exception {
+        String prompt = read("/prompts/sql-assistant-system.st");
+
+        assertThat(prompt)
+                .contains("Never guess DAB field names")
+                .contains("use only the exact field names returned")
+                .contains("Map business concepts from the user, such as \"city,\"")
+                .contains("If the exact field name cannot be identified")
+                .contains("Call describe_entities for Customer")
+                .contains("Identify the exact exposed field names for customer ID, city, and loyalty tier")
+                .contains("Call read_records with select using only those exact field names")
+                .contains("unless each name is actually exposed")
+                .contains("If a select field is rejected, call describe_entities again and retry once")
+                .contains("Do not retry with a broad read_records call unless the requested row limit is small");
+    }
+
     private static String read(String path) throws Exception {
         try (var input = ApplicationResourceTests.class.getResourceAsStream(path)) {
             assertThat(input).as("classpath resource %s", path).isNotNull();

@@ -1,6 +1,7 @@
 package com.example.sqlmcpchatopenrouter.chat;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.time.Duration;
 import java.util.ArrayList;
@@ -14,9 +15,13 @@ import org.springframework.ai.chat.model.Generation;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.openai.OpenAiChatOptions;
 import org.springframework.ai.tool.ToolCallback;
+import org.springframework.web.server.ResponseStatusException;
 
 import com.example.sqlmcpchatopenrouter.config.AppProperties;
 import com.example.sqlmcpchatopenrouter.security.SensitiveDataGuard;
+import com.openai.core.http.Headers;
+import com.openai.errors.OpenAIInvalidDataException;
+import com.openai.errors.RateLimitException;
 
 import tools.jackson.databind.json.JsonMapper;
 
@@ -91,6 +96,67 @@ class ChatModelRunnerTests {
         OpenAiChatOptions options = fixture.runner().chatOptions("primary", new ToolCallback[0]).build();
         assertThat(options.getResponseFormat()).isNull();
         assertThat(result.answer().status()).isEqualTo(ChatResponse.Status.ANSWER);
+    }
+
+    @Test
+    void jsonSchemaConfiguresProviderResponseFormat() {
+        Fixture fixture = fixture(false, AppProperties.ResponseFormat.JSON_SCHEMA,
+                prompt -> response(VALID_ANSWER));
+
+        OpenAiChatOptions options = fixture.runner().chatOptions("primary", new ToolCallback[0]).build();
+
+        assertThat(options.getResponseFormat()).isNotNull();
+        assertThat(options.getResponseFormat().getType())
+                .isEqualTo(org.springframework.ai.openai.OpenAiChatModel.ResponseFormat.Type.JSON_SCHEMA);
+        assertThat(options.getResponseFormat().getJsonSchema()).isNotBlank();
+    }
+
+    @Test
+    void rateLimitFailureReturnsSafeUserMessage() {
+        RateLimitException failure = RateLimitException.builder().headers(Headers.builder().build()).build();
+        Fixture fixture = fixture(false, AppProperties.ResponseFormat.PROMPT_JSON, prompt -> {
+            throw failure;
+        });
+
+        assertThatThrownBy(fixture::run)
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining(
+                        "The model provider is rate-limited. Please try again shortly or switch models.")
+                .hasMessageNotContaining(failure.getMessage());
+    }
+
+    @Test
+    void invalidDataFailureReturnsSafeUserMessage() {
+        OpenAIInvalidDataException failure = new OpenAIInvalidDataException("provider payload details");
+        Fixture fixture = fixture(false, AppProperties.ResponseFormat.JSON_SCHEMA, prompt -> {
+            throw failure;
+        });
+
+        assertThatThrownBy(fixture::run)
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("The selected model returned an unsupported response format. "
+                        + "Try another model or use prompt_json mode.")
+                .hasMessageNotContaining("provider payload details");
+    }
+
+    @Test
+    void structuredResponseKeepsCustomerIdSeparateFromExplicitlyRequestedNameToken() {
+        Fixture fixture = fixture(false, AppProperties.ResponseFormat.JSON_SCHEMA, prompt -> response("""
+                {"status":"ANSWER","answer":"Found one customer.",
+                "columns":["CustomerId","CustomerNameToken","City","LoyaltyTier"],
+                "rows":[["42","CU_ab12cd","Austin","Gold"]],
+                "partialResults":false,"dataNotes":"","followUpQuestion":""}
+                """));
+
+        ChatResponse.ModelAnswer answer = fixture.run().answer();
+
+        assertThat(answer.columns())
+                .containsExactly("CustomerId", "CustomerNameToken", "City", "LoyaltyTier");
+        assertThat(answer.rows()).containsExactly(List.of("42", "CU_ab12cd", "Austin", "Gold"));
+        assertThat(answer.rows().getFirst().getFirst()).as("CustomerId must remain the stable database ID")
+                .doesNotStartWith("CU_");
+        assertThat(answer.rows().getFirst().get(1)).as("explicitly requested name may be pseudonymized")
+                .startsWith("CU_");
     }
 
     private static Fixture fixture(boolean primaryRetryEnabled, AppProperties.ResponseFormat responseFormat,

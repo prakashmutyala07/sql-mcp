@@ -20,6 +20,8 @@ import org.springframework.web.server.ResponseStatusException;
 
 import com.example.sqlmcpchatopenrouter.config.AppProperties;
 import com.example.sqlmcpchatopenrouter.security.SensitiveDataGuard;
+import com.openai.errors.OpenAIInvalidDataException;
+import com.openai.errors.RateLimitException;
 
 /** Owns model invocation policy, OpenRouter options, and structured-output conversion. */
 @Component
@@ -31,6 +33,12 @@ public class ChatModelRunner {
 
     private static final String STRUCTURED_OUTPUT_ERROR =
             "I couldn't safely interpret the model response. Please try again.";
+
+    private static final String RATE_LIMIT_ERROR =
+            "The model provider is rate-limited. Please try again shortly or switch models.";
+
+    private static final String INVALID_DATA_ERROR =
+            "The selected model returned an unsupported response format. Try another model or use prompt_json mode.";
 
     private final ChatClient chatClient;
 
@@ -64,19 +72,19 @@ public class ChatModelRunner {
                 catch (ModelCallException retryFailure) {
                     logModelFailure(retryFailure);
                     return fallbackOrThrow(message, systemPrompt, history, tools, guardSession, progressSink,
-                            fallback, "Primary model failed after one retry.");
+                            fallback, "Primary model failed after one retry.", retryFailure);
                 }
             }
             return fallbackOrThrow(message, systemPrompt, history, tools, guardSession, progressSink,
-                    fallback, "Primary model failed.");
+                    fallback, "Primary model failed.", firstFailure);
         }
     }
 
     private Result fallbackOrThrow(String message, String systemPrompt, List<Message> history, ToolCallback[] tools,
             SensitiveDataGuard.Session guardSession, ProgressSink progressSink, String fallback,
-            String primaryFailureMessage) {
+            String primaryFailureMessage, ModelCallException primaryFailure) {
         if (!this.properties.execution().fallbackEnabled()) {
-            throw chatFailure(primaryFailureMessage);
+            throw chatFailure(userMessageFor(primaryFailureMessage, primaryFailure));
         }
         progressSink.progress("fallback", "Falling back to " + fallback + "\u2026");
         try {
@@ -84,7 +92,7 @@ public class ChatModelRunner {
         }
         catch (ModelCallException fallbackFailure) {
             logModelFailure(fallbackFailure);
-            throw chatFailure("Primary and fallback models both failed.");
+            throw chatFailure(userMessageFor("Primary and fallback models both failed.", fallbackFailure));
         }
     }
 
@@ -206,6 +214,20 @@ public class ChatModelRunner {
 
     private static ResponseStatusException chatFailure(String message) {
         return new ResponseStatusException(HttpStatus.BAD_GATEWAY, message);
+    }
+
+    private static String userMessageFor(String defaultMessage, ModelCallException failure) {
+        Throwable cause = failure == null ? null : failure.getCause();
+        while (cause != null) {
+            if (cause instanceof RateLimitException) {
+                return RATE_LIMIT_ERROR;
+            }
+            if (cause instanceof OpenAIInvalidDataException) {
+                return INVALID_DATA_ERROR;
+            }
+            cause = cause.getCause();
+        }
+        return defaultMessage;
     }
 
     public record Result(String model, boolean fallbackUsed, ChatResponse.ModelAnswer answer) {
