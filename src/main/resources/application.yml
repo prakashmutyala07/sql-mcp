@@ -55,9 +55,11 @@ app:
     fallback: ${APP_MODELS_FALLBACK:z-ai/glm-5.2:free}
   execution:
     fallback-enabled: ${APP_FALLBACK_ENABLED:true}
+    primary-retry-enabled: ${APP_PRIMARY_RETRY_ENABLED:false}
     max-completion-tokens: ${APP_MAX_COMPLETION_TOKENS:1200}
     temperature: ${APP_TEMPERATURE:0.1}
     request-timeout: ${APP_REQUEST_TIMEOUT:120s}
+    response-format: ${APP_RESPONSE_FORMAT:json_schema}
   memory:
     max-messages: ${APP_MEMORY_MAX_MESSAGES:20}
   openrouter:

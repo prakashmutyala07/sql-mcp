@@ -29,6 +29,18 @@ ECOM_MSSQL_CONNECTION_STRING=...
 
 Other settings such as the model names, MCP endpoint path, completion limit, temperature, and log level have defaults in `application.yml`; add them to `.env` only when overriding locally.
 
+For a responsive local POC, use a 30- or 45-second model timeout and leave the primary retry disabled:
+
+```properties
+APP_REQUEST_TIMEOUT=45s
+APP_PRIMARY_RETRY_ENABLED=false
+```
+
+The default execution flow is `primary -> fallback`. Set `APP_PRIMARY_RETRY_ENABLED=true` only when the extra latency
+of `primary -> retry primary -> fallback` is acceptable. Structured responses use OpenAI JSON Schema by default.
+For an OpenRouter model that does not reliably support that response format, set `APP_RESPONSE_FORMAT=prompt_json`;
+the schema is then supplied in the prompt and the final response is still parsed into the typed response contract.
+
 ## Secret Management
 
 - Keep local secrets only in `.env`.

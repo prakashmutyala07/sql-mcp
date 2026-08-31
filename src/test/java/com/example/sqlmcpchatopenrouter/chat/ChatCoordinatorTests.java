@@ -71,7 +71,8 @@ class ChatCoordinatorTests {
     private static Fixture fixture(ChatModel model) {
         AppProperties properties = new AppProperties(
                 new AppProperties.Models("primary", "fallback"),
-                new AppProperties.Execution(true, 1200, 0.1, Duration.ofSeconds(10)),
+                new AppProperties.Execution(true, false, 1200, 0.1, Duration.ofSeconds(10),
+                        AppProperties.ResponseFormat.JSON_SCHEMA),
                 new AppProperties.Memory(20), new AppProperties.Openrouter("", "test"),
                 new AppProperties.Security("unit-test-secret"),
                 List.of(new AppProperties.SensitiveField("Customer", "Email", "EM"),

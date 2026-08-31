@@ -11,7 +11,8 @@ class AiConfigurationTests {
     void chatMemoryBeanUsesConfiguredWindow() {
         AppProperties properties = new AppProperties(
                 new AppProperties.Models("primary", "fallback"),
-                new AppProperties.Execution(true, 1200, 0.1, java.time.Duration.ofSeconds(120)),
+                new AppProperties.Execution(true, false, 1200, 0.1, java.time.Duration.ofSeconds(120),
+                        AppProperties.ResponseFormat.JSON_SCHEMA),
                 new AppProperties.Memory(3),
                 new AppProperties.Openrouter("", "title"),
                 new AppProperties.Security("secret"),

@@ -54,27 +54,37 @@ public class ChatModelRunner {
             return complete(message, systemPrompt, history, tools, guardSession, primary, false);
         }
         catch (ModelCallException firstFailure) {
-            logger.warn("Primary model call failed; retrying once. model={} cause={}", primary,
-                    firstFailure.getCause().getClass().getSimpleName());
-            progressSink.progress("retry", "Primary model failed \u2014 retrying once\u2026");
-            sleepBeforeRetry();
-            try {
-                return complete(message, systemPrompt, history, tools, guardSession, primary, false);
-            }
-            catch (ModelCallException retryFailure) {
-                if (!this.properties.execution().fallbackEnabled()) {
-                    throw chatFailure("Primary model failed after one retry.", retryFailure);
-                }
-                logger.warn("Primary retry failed; falling back. model={} cause={}", fallback,
-                        retryFailure.getCause().getClass().getSimpleName());
-                progressSink.progress("fallback", "Falling back to " + fallback + "\u2026");
+            logModelFailure(firstFailure);
+            if (this.properties.execution().primaryRetryEnabled()) {
+                progressSink.progress("retry", "Primary model failed \u2014 retrying once\u2026");
+                sleepBeforeRetry();
                 try {
-                    return complete(message, systemPrompt, history, tools, guardSession, fallback, true);
+                    return complete(message, systemPrompt, history, tools, guardSession, primary, false);
                 }
-                catch (ModelCallException fallbackFailure) {
-                    throw chatFailure("Primary and fallback models both failed.", fallbackFailure);
+                catch (ModelCallException retryFailure) {
+                    logModelFailure(retryFailure);
+                    return fallbackOrThrow(message, systemPrompt, history, tools, guardSession, progressSink,
+                            fallback, "Primary model failed after one retry.");
                 }
             }
+            return fallbackOrThrow(message, systemPrompt, history, tools, guardSession, progressSink,
+                    fallback, "Primary model failed.");
+        }
+    }
+
+    private Result fallbackOrThrow(String message, String systemPrompt, List<Message> history, ToolCallback[] tools,
+            SensitiveDataGuard.Session guardSession, ProgressSink progressSink, String fallback,
+            String primaryFailureMessage) {
+        if (!this.properties.execution().fallbackEnabled()) {
+            throw chatFailure(primaryFailureMessage);
+        }
+        progressSink.progress("fallback", "Falling back to " + fallback + "\u2026");
+        try {
+            return complete(message, systemPrompt, history, tools, guardSession, fallback, true);
+        }
+        catch (ModelCallException fallbackFailure) {
+            logModelFailure(fallbackFailure);
+            throw chatFailure("Primary and fallback models both failed.");
         }
     }
 
@@ -84,7 +94,7 @@ public class ChatModelRunner {
         org.springframework.ai.chat.model.ChatResponse response;
         try {
             response = this.chatClient.prompt()
-                    .system(systemPrompt)
+                    .system(systemPrompt(systemPrompt))
                     .messages(history)
                     .user(message)
                     .options(chatOptions(model, tools))
@@ -92,7 +102,7 @@ public class ChatModelRunner {
                     .chatResponse();
         }
         catch (RuntimeException ex) {
-            throw new ModelCallException(ex);
+            throw new ModelCallException(model, ex, elapsedMillis(startedAt));
         }
 
         logUsage(model, response, System.nanoTime() - startedAt);
@@ -103,8 +113,8 @@ public class ChatModelRunner {
             parsed = this.answerConverter.convert(content);
         }
         catch (RuntimeException ex) {
-            logger.warn("Structured model response could not be parsed. model={} cause={}", model,
-                    ex.getClass().getSimpleName());
+            logger.warn("Structured model response could not be parsed. model={} exception={} elapsedMs={}", model,
+                    ex.getClass().getSimpleName(), elapsedMillis(startedAt));
             parsed = new ChatResponse.ModelAnswer(ChatResponse.Status.ERROR, STRUCTURED_OUTPUT_ERROR,
                     List.of(), List.of(), false, "", "");
         }
@@ -126,8 +136,8 @@ public class ChatModelRunner {
                 guardSession.protectOutput(answer.followUpQuestion()));
     }
 
-    private OpenAiChatOptions.Builder chatOptions(String model, ToolCallback[] tools) {
-        return OpenAiChatOptions.builder()
+    OpenAiChatOptions.Builder chatOptions(String model, ToolCallback[] tools) {
+        OpenAiChatOptions.Builder options = OpenAiChatOptions.builder()
                 .model(model)
                 .temperature(this.properties.execution().temperature())
                 .maxCompletionTokens(this.properties.execution().maxCompletionTokens())
@@ -135,12 +145,22 @@ public class ChatModelRunner {
                 .parallelToolCalls(false)
                 .timeout(this.properties.execution().requestTimeout())
                 .maxRetries(0)
-                .responseFormat(OpenAiChatModel.ResponseFormat.builder()
-                        .type(OpenAiChatModel.ResponseFormat.Type.JSON_SCHEMA)
-                        .jsonSchema(this.answerConverter.getJsonSchema())
-                        .strict(Boolean.FALSE)
-                        .build())
                 .customHeaders(openRouterHeaders());
+        if (this.properties.execution().responseFormat() == AppProperties.ResponseFormat.JSON_SCHEMA) {
+            options.responseFormat(OpenAiChatModel.ResponseFormat.builder()
+                    .type(OpenAiChatModel.ResponseFormat.Type.JSON_SCHEMA)
+                    .jsonSchema(this.answerConverter.getJsonSchema())
+                    .strict(Boolean.FALSE)
+                    .build());
+        }
+        return options;
+    }
+
+    private String systemPrompt(String systemPrompt) {
+        if (this.properties.execution().responseFormat() == AppProperties.ResponseFormat.PROMPT_JSON) {
+            return systemPrompt + "\n\n" + this.answerConverter.getFormat();
+        }
+        return systemPrompt;
     }
 
     private Map<String, String> openRouterHeaders() {
@@ -166,6 +186,15 @@ public class ChatModelRunner {
                 usage.getPromptTokens(), usage.getCompletionTokens(), usage.getTotalTokens());
     }
 
+    private static long elapsedMillis(long startedAtNanos) {
+        return (System.nanoTime() - startedAtNanos) / 1_000_000L;
+    }
+
+    private static void logModelFailure(ModelCallException failure) {
+        logger.warn("Model call failed. model={} exception={} elapsedMs={}", failure.model(),
+                failure.getCause().getClass().getSimpleName(), failure.elapsedMs());
+    }
+
     private static void sleepBeforeRetry() {
         try {
             Thread.sleep(RETRY_BACKOFF_MILLIS);
@@ -175,8 +204,7 @@ public class ChatModelRunner {
         }
     }
 
-    private static ResponseStatusException chatFailure(String message, RuntimeException failure) {
-        logger.warn("{} cause={}", message, failure.getClass().getSimpleName());
+    private static ResponseStatusException chatFailure(String message) {
         return new ResponseStatusException(HttpStatus.BAD_GATEWAY, message);
     }
 
@@ -185,8 +213,22 @@ public class ChatModelRunner {
 
     private static final class ModelCallException extends RuntimeException {
 
-        private ModelCallException(RuntimeException cause) {
+        private final String model;
+
+        private final long elapsedMs;
+
+        private ModelCallException(String model, RuntimeException cause, long elapsedMs) {
             super(cause);
+            this.model = model;
+            this.elapsedMs = elapsedMs;
+        }
+
+        private String model() {
+            return this.model;
+        }
+
+        private long elapsedMs() {
+            return this.elapsedMs;
         }
     }
 }

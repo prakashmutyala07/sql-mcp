@@ -15,12 +15,20 @@ public record AppProperties(Models models, Execution execution, Memory memory, O
     public record Models(String primary, String fallback) {
     }
 
-    public record Execution(boolean fallbackEnabled, Integer maxCompletionTokens, Double temperature,
-            java.time.Duration requestTimeout) {
+    public record Execution(boolean fallbackEnabled, boolean primaryRetryEnabled, Integer maxCompletionTokens,
+            Double temperature, java.time.Duration requestTimeout, ResponseFormat responseFormat) {
 
         public Execution {
             requestTimeout = requestTimeout == null ? java.time.Duration.ofSeconds(120) : requestTimeout;
+            responseFormat = responseFormat == null ? ResponseFormat.JSON_SCHEMA : responseFormat;
         }
+    }
+
+    public enum ResponseFormat {
+
+        JSON_SCHEMA,
+
+        PROMPT_JSON
     }
 
     public record Memory(int maxMessages) {
