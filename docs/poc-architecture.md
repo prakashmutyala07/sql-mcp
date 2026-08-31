@@ -83,21 +83,25 @@ sequenceDiagram
 
 ## Component responsibilities
 
-| Component | Responsibility |
-|---|---|
-| Chat UI | Collects questions and renders streamed, structured results. |
-| ChatController | Validates API requests and delegates chat turns. |
-| ChatCoordinator | Coordinates one request across privacy, prompt, memory, tools, model, and response handling. |
-| PromptProvider | Supplies strong system instructions and request-time date context. |
-| SensitiveDataGuard | Protects PII in input, tool results, logs, and final output. |
-| ChatModelRunner | Applies primary/fallback model policy and converts model output to the response contract. |
-| Spring AI ChatClient | Connects the application to OpenRouter and guarded MCP tool callbacks. |
-| OpenRouter LLM | Interprets questions and requests tools; it has no direct database connection. |
-| Sanitized Conversation Memory | Retains bounded, protected context for simple follow-up questions. |
-| Structured Response | Carries status, summary, tabular data, notes, and follow-up information to the UI. |
-| DAB MCP Tools | Provide approved schema discovery, record reading, and aggregation operations. |
-| Microsoft DAB | Mediates the configured entities and read-only operations. |
-| SQL Server | Stores source data and enforces read-only access for the DAB identity. |
+The diagram uses business-facing labels. This table maps each one to the component that implements it.
+
+| Diagram label | Implementation component | Responsibility |
+|---|---|---|
+| Chat UI | Chat UI | Collects questions and renders streamed, structured results. |
+| Chat API | `ChatController` | Validates API requests and delegates chat turns. |
+| Request Coordinator | `ChatCoordinator` | Coordinates one request across privacy, prompt, memory, tools, model, and response handling. |
+| System Instructions | `PromptProvider` | Supplies strong system instructions and request-time date context. |
+| PII Guardrail | `SensitiveDataGuard` | Protects PII in input, tool results, logs, and final output. |
+| Model Execution | `ChatModelRunner` | Applies primary/fallback model policy and converts model output to the response contract. |
+| AI Integration Layer | Spring AI `ChatClient` | Connects the application to OpenRouter and guarded MCP tool callbacks. |
+| OpenRouter LLM | OpenRouter LLM | Interprets questions and requests tools; it has no direct database connection. |
+| Sanitized Conversation Memory | Sanitized conversation memory | Retains bounded, protected context for simple follow-up questions. |
+| Structured Response | Structured response contract | Carries status, summary, tabular data, notes, and follow-up information to the UI. |
+| Schema Discovery | `describe_entities` MCP tool | Describes the entities and fields the assistant is allowed to see. |
+| Record Read | `read_records` MCP tool | Returns filtered records from approved entities. |
+| Aggregation | `aggregate_records` MCP tool | Returns counts and totals without exposing raw rows. |
+| Microsoft Data API Builder | Microsoft DAB | Mediates the configured entities and read-only operations. |
+| SQL Server | SQL Server | Stores source data and enforces read-only access for the DAB identity. |
 
 ## Current scope and future scope
 
