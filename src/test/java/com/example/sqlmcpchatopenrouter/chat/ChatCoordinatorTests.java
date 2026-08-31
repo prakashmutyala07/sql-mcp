@@ -17,8 +17,10 @@ import org.springframework.ai.chat.model.Generation;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.tool.ToolCallback;
 import org.springframework.core.io.ByteArrayResource;
+import org.springframework.mock.env.MockEnvironment;
 
 import com.example.sqlmcpchatopenrouter.config.AppProperties;
+import com.example.sqlmcpchatopenrouter.config.SensitiveLoggingPolicy;
 import com.example.sqlmcpchatopenrouter.mcp.McpToolCatalog;
 import com.example.sqlmcpchatopenrouter.security.SensitiveDataGuard;
 
@@ -75,14 +77,17 @@ class ChatCoordinatorTests {
                         AppProperties.ResponseFormat.JSON_SCHEMA),
                 new AppProperties.Memory(20), new AppProperties.Openrouter("", "test"),
                 new AppProperties.Security("unit-test-secret"),
+                new AppProperties.Logging(false),
                 List.of(new AppProperties.SensitiveField("Customer", "Email", "EM"),
                         new AppProperties.SensitiveField("Customer", "Phone", "PH")));
-        SensitiveDataGuard guard = new SensitiveDataGuard(properties, JsonMapper.builder().build());
+        SensitiveLoggingPolicy loggingPolicy = new SensitiveLoggingPolicy(properties, new MockEnvironment());
+        SensitiveDataGuard guard = new SensitiveDataGuard(properties, JsonMapper.builder().build(), loggingPolicy);
         ChatMemory memory = MessageWindowChatMemory.builder().maxMessages(20).build();
         PromptProvider prompts = new PromptProvider(new ByteArrayResource(
                 "Date __CURRENT_DATE__, zone __TIME_ZONE__.".getBytes(StandardCharsets.UTF_8)));
-        ChatModelRunner runner = new ChatModelRunner(ChatClient.builder(model), properties);
-        ChatCoordinator coordinator = new ChatCoordinator(new EmptyToolCatalog(), memory, guard, prompts, runner);
+        ChatModelRunner runner = new ChatModelRunner(ChatClient.builder(model), properties, loggingPolicy);
+        ChatCoordinator coordinator = new ChatCoordinator(new EmptyToolCatalog(), memory, guard, prompts, runner,
+                loggingPolicy);
         return new Fixture(coordinator, memory);
     }
 

@@ -5,7 +5,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -25,6 +24,7 @@ import tools.jackson.databind.node.ArrayNode;
 import tools.jackson.databind.node.ObjectNode;
 
 import com.example.sqlmcpchatopenrouter.config.AppProperties;
+import com.example.sqlmcpchatopenrouter.config.SensitiveLoggingPolicy;
 
 /**
  * Keeps sensitive column values out of everything that leaves this process.
@@ -37,7 +37,8 @@ import com.example.sqlmcpchatopenrouter.config.AppProperties;
  * <p>Tokens are deterministic — {@code HMAC-SHA256(secret, entity.field|value)} rendered as
  * {@code CU_a3f9d2} — so the same customer reads as the same token across tool calls and
  * across turns, which is what lets the model group and join on them. The token to real-value
- * map lives only on the per-request {@link Session}; it is never persisted and never logged.
+ * map lives only on the per-request {@link Session}; it is never persisted and is logged only
+ * when local sensitive-debug logging is explicitly enabled.
  */
 @Component
 public class SensitiveDataGuard {
@@ -61,14 +62,18 @@ public class SensitiveDataGuard {
 
     private final ObjectMapper objectMapper;
 
+    private final SensitiveLoggingPolicy sensitiveLoggingPolicy;
+
     /** Lower-cased field name -> token prefix. Matching is by field name across all entities. */
     private final Map<String, String> prefixByField;
 
     private final byte[] secretKey;
 
-    public SensitiveDataGuard(AppProperties properties, ObjectMapper objectMapper) {
+    public SensitiveDataGuard(AppProperties properties, ObjectMapper objectMapper,
+            SensitiveLoggingPolicy sensitiveLoggingPolicy) {
         this.properties = properties;
         this.objectMapper = objectMapper;
+        this.sensitiveLoggingPolicy = sensitiveLoggingPolicy;
         this.prefixByField = properties.sensitiveFields().stream()
                 .collect(Collectors.toMap(field -> field.field().toLowerCase(),
                         AppProperties.SensitiveField::prefixOrDefault, (first, second) -> first));
@@ -84,13 +89,18 @@ public class SensitiveDataGuard {
     }
 
     public Session newSession() {
-        return new Session(step -> {
+        return new Session("none", step -> {
         });
     }
 
     /** @param onStep receives a short human-readable note each time a tool is about to run. */
     public Session newSession(java.util.function.Consumer<String> onStep) {
-        return new Session(onStep);
+        return new Session("none", onStep);
+    }
+
+    /** @param onStep receives a short human-readable note each time a tool is about to run. */
+    public Session newSession(String requestId, java.util.function.Consumer<String> onStep) {
+        return new Session(StringUtils.hasText(requestId) ? requestId : "none", onStep);
     }
 
     public Set<String> protectedFields() {
@@ -109,7 +119,10 @@ public class SensitiveDataGuard {
 
         private final java.util.function.Consumer<String> onStep;
 
-        private Session(java.util.function.Consumer<String> onStep) {
+        private final String requestId;
+
+        private Session(String requestId, java.util.function.Consumer<String> onStep) {
+            this.requestId = requestId;
             this.onStep = onStep;
         }
 
@@ -124,10 +137,27 @@ public class SensitiveDataGuard {
 
         /** Removes recognizable PII before the user message reaches memory or the model. */
         public String protectInput(String text) {
+            long detectionStartedAt = System.nanoTime();
+            int before = tokenCount();
             String protectedText = replaceMatches(text, EMAIL, "Email", prefix("email", "EM"));
             protectedText = replacePhoneMatches(protectedText, "Phone", prefix("phone", "PH"));
             protectedText = replaceGroup(protectedText, FULL_NAME_FILTER, 2, "FullName", prefix("fullname", "CU"));
-            return replaceGroup(protectedText, EXPLICIT_NAME, 1, "FullName", prefix("fullname", "CU"));
+            protectedText = replaceGroup(protectedText, EXPLICIT_NAME, 1, "FullName", prefix("fullname", "CU"));
+            int detected = tokenCount() - before;
+            logger.info("[PII_DETECTION] requestId={} entities={} tokenTypes={} durationMs={}",
+                    this.requestId, detected, this.tokens.prefixes(), elapsedMillis(detectionStartedAt));
+            if (sensitiveLoggingPolicy.sensitiveLoggingEnabled()) {
+                logger.debug("[PII_DETECTION] requestId={} detectedEntities={}", this.requestId,
+                        this.tokens.snapshot());
+            }
+            logger.info("[PII_PROTECTION] requestId={} protected=true tokens={} durationMs={}",
+                    this.requestId, tokenCount(), elapsedMillis(detectionStartedAt));
+            logger.debug("[PII_PROTECTION] requestId={} protectedMessage={}", this.requestId, protectedText);
+            if (sensitiveLoggingPolicy.sensitiveLoggingEnabled()) {
+                logger.debug("[PII_PROTECTION] requestId={} tokenMapping={} protectedMessage={}",
+                        this.requestId, this.tokens.snapshot(), protectedText);
+            }
+            return protectedText;
         }
 
         /** Final defense for provider-generated email/phone text. Database tokens stay pseudonymized. */
@@ -152,15 +182,32 @@ public class SensitiveDataGuard {
             if (!StringUtils.hasText(payload)) {
                 return payload;
             }
+            if (sensitiveLoggingPolicy.sensitiveLoggingEnabled()) {
+                logger.debug("[DAB_RESULT_RAW] requestId={} rawResult={}", this.requestId, payload);
+            }
             try {
+                long startedAt = System.nanoTime();
+                int before = tokenCount();
                 JsonNode root = objectMapper.readTree(payload);
                 walk(root);
-                return objectMapper.writeValueAsString(root);
+                String protectedPayload = objectMapper.writeValueAsString(root);
+                logger.info("[TOOL_RESULT_PROTECTION] requestId={} protectedEntities={} resultBytes={} "
+                        + "durationMs={}", this.requestId, tokenCount() - before,
+                        protectedPayload.length(), elapsedMillis(startedAt));
+                logger.debug("[TOOL_RESULT_PROTECTION] requestId={} protectedToolResult={}",
+                        this.requestId, protectedPayload);
+                if (sensitiveLoggingPolicy.sensitiveLoggingEnabled()) {
+                    logger.debug("[TOOL_RESULT_PROTECTION] requestId={} before={} after={}",
+                            this.requestId, payload, protectedPayload);
+                    logger.debug("[MODEL_TOOL_RESULT] requestId={} protectedToolResult={}",
+                            this.requestId, protectedPayload);
+                }
+                return protectedPayload;
             }
             catch (RuntimeException ex) {
                 // Not JSON, or unparseable. Fail closed: never hand back something we could not inspect.
-                logger.warn("Tool result was not parseable JSON; withholding it from the model. cause={}",
-                        ex.getClass().getSimpleName());
+                logger.warn("[TOOL_RESULT_PROTECTION] requestId={} parseable=false action=withheld errorType={}",
+                        this.requestId, ex.getClass().getSimpleName());
                 return "{\"error\":\"Tool result could not be inspected for sensitive data and was withheld.\"}";
             }
         }
@@ -306,36 +353,68 @@ public class SensitiveDataGuard {
 
         @Override
         public String call(String toolInput) {
-            return audited(toolInput, () -> this.delegate.call(this.session.tokens.detokenize(toolInput)));
+            return audited(toolInput, detokenizedToolInput -> this.delegate.call(detokenizedToolInput));
         }
 
         @Override
         public String call(String toolInput, ToolContext toolContext) {
-            return audited(toolInput,
-                    () -> this.delegate.call(this.session.tokens.detokenize(toolInput), toolContext));
+            return audited(toolInput, detokenizedToolInput -> this.delegate.call(detokenizedToolInput, toolContext));
         }
 
-        private String audited(String toolInput, Supplier<String> invocation) {
+        private String audited(String toolInput, ToolInvocation invocation) {
             String name = getToolDefinition().name();
             this.session.toolInvocations.incrementAndGet();
             this.session.onStep.accept(ToolCallIntent.describeStep(objectMapper, name, toolInput));
+            SensitiveDataGuard.logger.info("[TOOL_REQUEST] requestId={} tool={} intent={}",
+                    this.session.requestId, name, ToolCallIntent.render(objectMapper, toolInput));
+            SensitiveDataGuard.logger.debug("[TOOL_REQUEST] requestId={} tool={} protectedArguments={}",
+                    this.session.requestId, name, toolInput);
+            String detokenizedToolInput = this.session.tokens.detokenize(toolInput);
+            SensitiveDataGuard.logger.info("[TOOL_SECURE_BOUNDARY] requestId={} tool={} resolvedTokens={}",
+                    this.session.requestId, name, ToolCallIntent.resolvedTokenCount(toolInput, detokenizedToolInput));
+            SensitiveDataGuard.logger.debug("[TOOL_SECURE_BOUNDARY] requestId={} tool={} resolvedTokens={} fields={}",
+                    this.session.requestId, name,
+                    ToolCallIntent.resolvedTokenCount(toolInput, detokenizedToolInput),
+                    ToolCallIntent.keys(objectMapper, toolInput));
+            if (sensitiveLoggingPolicy.sensitiveLoggingEnabled()) {
+                SensitiveDataGuard.logger.debug("[TOOL_SECURE_BOUNDARY] requestId={} tool={} before={} after={}",
+                        this.session.requestId, name, toolInput, detokenizedToolInput);
+                SensitiveDataGuard.logger.debug("[DAB_CALL] requestId={} tool={} arguments={}",
+                        this.session.requestId, name, detokenizedToolInput);
+            }
             long startedAt = System.nanoTime();
             String raw;
             try {
-                raw = invocation.get();
+                if (sensitiveLoggingPolicy.sensitiveLoggingEnabled()) {
+                    SensitiveDataGuard.logger.debug("[DAB_CALL] requestId={} tool={} sendingArguments={}",
+                            this.session.requestId, name, detokenizedToolInput);
+                }
+                raw = invocation.call(detokenizedToolInput);
             }
             catch (RuntimeException ex) {
-                SensitiveDataGuard.logger.warn("tool={} intent={} outcome=error cause={}", name,
-                        ToolCallIntent.render(objectMapper, toolInput), ex.getClass().getSimpleName());
+                SensitiveDataGuard.logger.error("[DAB_CALL] requestId={} tool={} failed errorType={}",
+                        this.session.requestId, name, ex.getClass().getSimpleName());
                 throw ex;
             }
             long latencyMs = (System.nanoTime() - startedAt) / 1_000_000L;
+            SensitiveDataGuard.logger.info("[DAB_CALL] requestId={} tool={} durationMs={} resultBytes={}",
+                    this.session.requestId, name, latencyMs, raw == null ? 0 : raw.length());
             int before = this.session.tokenCount();
             String safe = this.session.tokenizeJson(raw);
-            SensitiveDataGuard.logger.info("tool={} intent={} latencyMs={} resultBytes={} newTokens={}",
-                    name, ToolCallIntent.render(objectMapper, toolInput),
-                    latencyMs, safe == null ? 0 : safe.length(), this.session.tokenCount() - before);
+            SensitiveDataGuard.logger.info("[TOOL_RESULT_PROTECTION] requestId={} tool={} protectedResultBytes={} "
+                    + "newTokens={}", this.session.requestId, name, safe == null ? 0 : safe.length(),
+                    this.session.tokenCount() - before);
             return safe;
         }
+    }
+
+    @FunctionalInterface
+    private interface ToolInvocation {
+
+        String call(String detokenizedToolInput);
+    }
+
+    private static long elapsedMillis(long startedAtNanos) {
+        return (System.nanoTime() - startedAtNanos) / 1_000_000L;
     }
 }

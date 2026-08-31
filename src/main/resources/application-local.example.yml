@@ -1,0 +1,14 @@
+spring:
+  profiles:
+    active: local
+
+app:
+  logging:
+    # Keep false unless you are explicitly validating the local PII/tokenization flow.
+    log-sensitive-data: false
+
+logging:
+  level:
+    com.example.sqlmcpchatopenrouter.chat: DEBUG
+    com.example.sqlmcpchatopenrouter.security: DEBUG
+    com.example.sqlmcpchatopenrouter.mcp: DEBUG

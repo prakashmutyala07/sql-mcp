@@ -52,6 +52,35 @@ final class ToolCallIntent {
         }
     }
 
+    static int resolvedTokenCount(String protectedInput, String detokenizedInput) {
+        if (!StringUtils.hasText(protectedInput) || !StringUtils.hasText(detokenizedInput)
+                || protectedInput.equals(detokenizedInput)) {
+            return 0;
+        }
+        java.util.regex.Matcher matcher =
+                java.util.regex.Pattern.compile("\\b[A-Z]{2,8}_[0-9a-f]{6,12}\\b").matcher(protectedInput);
+        int count = 0;
+        while (matcher.find()) {
+            if (!detokenizedInput.contains(matcher.group())) {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    static List<String> keys(ObjectMapper objectMapper, String toolInput) {
+        if (!StringUtils.hasText(toolInput)) {
+            return List.of();
+        }
+        try {
+            JsonNode args = objectMapper.readTree(toolInput);
+            return new TreeSet<>(args.propertyNames()).stream().toList();
+        }
+        catch (RuntimeException ex) {
+            return List.of("<unparseable>");
+        }
+    }
+
     private static String entityName(ObjectMapper objectMapper, String toolInput) {
         try {
             JsonNode args = objectMapper.readTree(toolInput);

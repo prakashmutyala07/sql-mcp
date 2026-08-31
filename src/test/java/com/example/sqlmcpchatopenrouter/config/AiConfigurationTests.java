@@ -16,6 +16,7 @@ class AiConfigurationTests {
                 new AppProperties.Memory(3),
                 new AppProperties.Openrouter("", "title"),
                 new AppProperties.Security("secret"),
+                new AppProperties.Logging(false),
                 java.util.List.of());
 
         ChatMemory chatMemory = new AiConfiguration().chatMemory(properties);

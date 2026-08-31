@@ -2,10 +2,13 @@ package com.example.sqlmcpchatopenrouter.security;
 
 import java.nio.charset.StandardCharsets;
 import java.util.HexFormat;
+import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
@@ -26,6 +29,16 @@ final class SensitiveTokenStore {
 
     int size() {
         return this.tokenToValue.size();
+    }
+
+    Set<String> prefixes() {
+        return this.tokenToValue.keySet().stream()
+                .map(token -> token.substring(0, token.indexOf('_')))
+                .collect(Collectors.toCollection(java.util.TreeSet::new));
+    }
+
+    Map<String, String> snapshot() {
+        return new LinkedHashMap<>(this.tokenToValue);
     }
 
     String detokenize(String text) {

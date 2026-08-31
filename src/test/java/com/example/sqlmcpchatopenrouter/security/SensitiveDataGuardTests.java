@@ -8,8 +8,10 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Test;
 import org.springframework.ai.tool.ToolCallback;
 import org.springframework.ai.tool.definition.ToolDefinition;
+import org.springframework.mock.env.MockEnvironment;
 
 import com.example.sqlmcpchatopenrouter.config.AppProperties;
+import com.example.sqlmcpchatopenrouter.config.SensitiveLoggingPolicy;
 
 import tools.jackson.databind.json.JsonMapper;
 
@@ -28,7 +30,10 @@ class SensitiveDataGuardTests {
             ]}
             """;
 
-    private final SensitiveDataGuard guard = new SensitiveDataGuard(properties(), JsonMapper.builder().build());
+    private final AppProperties properties = properties();
+
+    private final SensitiveDataGuard guard =
+            new SensitiveDataGuard(this.properties, JsonMapper.builder().build(), loggingPolicy(this.properties));
 
     private static AppProperties properties() {
         return new AppProperties(
@@ -38,9 +43,14 @@ class SensitiveDataGuardTests {
                 new AppProperties.Memory(20),
                 new AppProperties.Openrouter("", "title"),
                 new AppProperties.Security("unit-test-secret"),
+                new AppProperties.Logging(false),
                 List.of(new AppProperties.SensitiveField("Customer", "FullName", "CU"),
                         new AppProperties.SensitiveField("Customer", "Email", "EM"),
                         new AppProperties.SensitiveField("Customer", "Phone", "PH")));
+    }
+
+    private static SensitiveLoggingPolicy loggingPolicy(AppProperties properties) {
+        return new SensitiveLoggingPolicy(properties, new MockEnvironment());
     }
 
     private static ToolCallback stubCallback(String payload) {
@@ -182,6 +192,15 @@ class SensitiveDataGuardTests {
                 "{\"entity\":\"Customer\",\"filter\":\"FullName eq 'Jane Doe'\"}");
 
         assertThat(rendered).contains("Customer", "<redacted>").doesNotContain("Jane Doe");
+    }
+
+    @Test
+    void secureBoundaryLogsCanCountResolvedTokensWithoutValues() {
+        int resolved = ToolCallIntent.resolvedTokenCount(
+                "{\"filter\":\"Email eq 'EM_ab12cd' and Phone eq 'PH_ef3456'\"}",
+                "{\"filter\":\"Email eq 'x@example.test' and Phone eq '555-0101'\"}");
+
+        assertThat(resolved).isEqualTo(2);
     }
 
     @Test

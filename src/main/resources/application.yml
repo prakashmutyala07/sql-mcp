@@ -68,6 +68,8 @@ app:
     title: ${OPENROUTER_X_TITLE:sql-mcp-chat-openrouter}
   security:
     token-secret-key: ${TOKEN_SECRET_KEY:}
+  logging:
+    log-sensitive-data: ${APP_LOG_SENSITIVE_DATA:false}
   # entity.field pairs tokenized before any tool result reaches the model.
   # City/StateProvince/Country are deliberately NOT listed: they are coarse
   # geography needed for regional aggregation, not direct identifiers.
@@ -98,3 +100,6 @@ logging:
   level:
     root: INFO
     com.example.sqlmcpchatopenrouter: ${APP_LOG_LEVEL:INFO}
+    com.example.sqlmcpchatopenrouter.chat: ${APP_CHAT_LOG_LEVEL:INFO}
+    com.example.sqlmcpchatopenrouter.security: ${APP_SECURITY_LOG_LEVEL:INFO}
+    com.example.sqlmcpchatopenrouter.mcp: ${APP_MCP_LOG_LEVEL:INFO}
