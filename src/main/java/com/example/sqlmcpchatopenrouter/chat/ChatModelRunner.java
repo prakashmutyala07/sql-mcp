@@ -105,12 +105,11 @@ public class ChatModelRunner {
             SensitiveDataGuard.Session guardSession, String model, boolean fallbackUsed, String requestId) {
         long startedAt = System.nanoTime();
         org.springframework.ai.chat.model.ChatResponse response;
-        logger.info("[MODEL_REQUEST] requestId={} model={} historyMessages={} tools={} responseFormat={}",
-                requestId, model, history.size(), tools.length, this.properties.execution().responseFormat());
-        logger.debug("[MODEL_REQUEST] requestId={} protectedUserMessage={} toolNames={}", requestId, message,
-                toolNames(tools));
+        logger.info("[MODEL_REQUEST] requestId={} model={} historyMessages={} tools={} responseFormat={} "
+                + "protectedUserMessage={} toolNames={}", requestId, model, history.size(), tools.length,
+                this.properties.execution().responseFormat(), message, toolNames(tools));
         if (this.sensitiveLoggingPolicy.sensitiveLoggingEnabled()) {
-            logger.debug("[MODEL_REQUEST] requestId={} systemPrompt={} protectedConversationContext={}",
+            logger.info("[MODEL_REQUEST] requestId={} systemPrompt={} protectedConversationContext={}",
                     requestId, systemPrompt, history.stream().map(Message::getText).toList());
         }
         try {
@@ -130,7 +129,7 @@ public class ChatModelRunner {
         String content = response == null || response.getResult() == null
                 || response.getResult().getOutput() == null ? null : response.getResult().getOutput().getText();
         if (this.sensitiveLoggingPolicy.sensitiveLoggingEnabled()) {
-            logger.debug("[MODEL_RESPONSE] requestId={} modelContent={}", requestId, content);
+            logger.info("[MODEL_RESPONSE] requestId={} modelContent={}", requestId, content);
         }
         long structuredStartedAt = System.nanoTime();
         ChatResponse.ModelAnswer parsed;

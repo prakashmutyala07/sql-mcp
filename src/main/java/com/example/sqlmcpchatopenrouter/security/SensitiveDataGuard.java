@@ -147,14 +147,14 @@ public class SensitiveDataGuard {
             logger.info("[PII_DETECTION] requestId={} entities={} tokenTypes={} durationMs={}",
                     this.requestId, detected, this.tokens.prefixes(), elapsedMillis(detectionStartedAt));
             if (sensitiveLoggingPolicy.sensitiveLoggingEnabled()) {
-                logger.debug("[PII_DETECTION] requestId={} detectedEntities={}", this.requestId,
+                logger.info("[PII_DETECTION] requestId={} detectedEntities={}", this.requestId,
                         this.tokens.snapshot());
             }
             logger.info("[PII_PROTECTION] requestId={} protected=true tokens={} durationMs={}",
                     this.requestId, tokenCount(), elapsedMillis(detectionStartedAt));
-            logger.debug("[PII_PROTECTION] requestId={} protectedMessage={}", this.requestId, protectedText);
+            logger.info("[PII_PROTECTION] requestId={} protectedMessage={}", this.requestId, protectedText);
             if (sensitiveLoggingPolicy.sensitiveLoggingEnabled()) {
-                logger.debug("[PII_PROTECTION] requestId={} tokenMapping={} protectedMessage={}",
+                logger.info("[PII_PROTECTION] requestId={} tokenMapping={} protectedMessage={}",
                         this.requestId, this.tokens.snapshot(), protectedText);
             }
             return protectedText;
@@ -184,7 +184,7 @@ public class SensitiveDataGuard {
                 return payload;
             }
             if (sensitiveLoggingPolicy.sensitiveLoggingEnabled()) {
-                logger.debug("[DAB_RESULT_RAW] requestId={} rawResult={}", this.requestId, payload);
+                logger.info("[DAB_RESULT_RAW] requestId={} rawResult={}", this.requestId, payload);
             }
             try {
                 long startedAt = System.nanoTime();
@@ -195,12 +195,12 @@ public class SensitiveDataGuard {
                 logger.info("[TOOL_RESULT_PROTECTION] requestId={} protectedEntities={} resultBytes={} "
                         + "durationMs={}", this.requestId, tokenCount() - before,
                         protectedPayload.length(), elapsedMillis(startedAt));
-                logger.debug("[TOOL_RESULT_PROTECTION] requestId={} protectedToolResult={}",
-                        this.requestId, protectedPayload);
+                logger.info("[TOOL_RESULT_PROTECTION] requestId={} protectedToolResult={}", this.requestId,
+                        protectedPayload);
                 if (sensitiveLoggingPolicy.sensitiveLoggingEnabled()) {
-                    logger.debug("[TOOL_RESULT_PROTECTION] requestId={} before={} after={}",
+                    logger.info("[TOOL_RESULT_PROTECTION] requestId={} before={} after={}",
                             this.requestId, payload, protectedPayload);
-                    logger.debug("[MODEL_TOOL_RESULT] requestId={} protectedToolResult={}",
+                    logger.info("[MODEL_TOOL_RESULT] requestId={} protectedToolResult={}",
                             this.requestId, protectedPayload);
                 }
                 return protectedPayload;
@@ -368,26 +368,26 @@ public class SensitiveDataGuard {
             this.session.onStep.accept(ToolCallIntent.describeStep(objectMapper, name, toolInput));
             SensitiveDataGuard.logger.info("[TOOL_REQUEST] requestId={} tool={} intent={}",
                     this.session.requestId, name, ToolCallIntent.render(objectMapper, toolInput));
-            SensitiveDataGuard.logger.debug("[TOOL_REQUEST] requestId={} tool={} protectedArguments={}",
+            SensitiveDataGuard.logger.info("[TOOL_REQUEST] requestId={} tool={} protectedArguments={}",
                     this.session.requestId, name, toolInput);
             String detokenizedToolInput = this.session.tokens.detokenize(toolInput);
             SensitiveDataGuard.logger.info("[TOOL_SECURE_BOUNDARY] requestId={} tool={} resolvedTokens={}",
                     this.session.requestId, name, ToolCallIntent.resolvedTokenCount(toolInput, detokenizedToolInput));
-            SensitiveDataGuard.logger.debug("[TOOL_SECURE_BOUNDARY] requestId={} tool={} resolvedTokens={} fields={}",
+            SensitiveDataGuard.logger.info("[TOOL_SECURE_BOUNDARY] requestId={} tool={} resolvedTokens={} fields={}",
                     this.session.requestId, name,
                     ToolCallIntent.resolvedTokenCount(toolInput, detokenizedToolInput),
                     ToolCallIntent.keys(objectMapper, toolInput));
             if (sensitiveLoggingPolicy.sensitiveLoggingEnabled()) {
-                SensitiveDataGuard.logger.debug("[TOOL_SECURE_BOUNDARY] requestId={} tool={} before={} after={}",
+                SensitiveDataGuard.logger.info("[TOOL_SECURE_BOUNDARY] requestId={} tool={} before={} after={}",
                         this.session.requestId, name, toolInput, detokenizedToolInput);
-                SensitiveDataGuard.logger.debug("[DAB_CALL] requestId={} tool={} arguments={}",
+                SensitiveDataGuard.logger.info("[DAB_CALL] requestId={} tool={} arguments={}",
                         this.session.requestId, name, detokenizedToolInput);
             }
             long startedAt = System.nanoTime();
             String raw;
             try {
                 if (sensitiveLoggingPolicy.sensitiveLoggingEnabled()) {
-                    SensitiveDataGuard.logger.debug("[DAB_CALL] requestId={} tool={} sendingArguments={}",
+                    SensitiveDataGuard.logger.info("[DAB_CALL] requestId={} tool={} sendingArguments={}",
                             this.session.requestId, name, detokenizedToolInput);
                 }
                 raw = invocation.call(detokenizedToolInput);

@@ -4,8 +4,9 @@ spring:
 
 app:
   logging:
-    # Keep false unless you are explicitly validating the local PII/tokenization flow.
-    log-sensitive-data: false
+    # For local PII-flow validation only, run with:
+    # SPRING_PROFILES_ACTIVE=local APP_LOG_SENSITIVE_DATA=true
+    log-sensitive-data: ${APP_LOG_SENSITIVE_DATA:false}
 
 logging:
   level:

@@ -60,7 +60,7 @@ public class ChatCoordinator implements ChatOperations {
         logger.info("[CHAT_REQUEST] requestId={} conversationId={} request started inputChars={}",
                 requestId, resolvedConversationId, message == null ? 0 : message.length());
         if (this.sensitiveLoggingPolicy.sensitiveLoggingEnabled()) {
-            logger.debug("[CHAT_REQUEST] requestId={} rawUserInput={}", requestId, message);
+            logger.info("[CHAT_REQUEST] requestId={} rawUserInput={}", requestId, message);
         }
 
         progressSink.progress("prepare", "Preparing a safe database request\u2026");
@@ -74,7 +74,7 @@ public class ChatCoordinator implements ChatOperations {
         logger.info("[MEMORY_CONTEXT] requestId={} conversationId={} sanitized=true messages={}",
                 requestId, resolvedConversationId, history.size());
         if (this.sensitiveLoggingPolicy.sensitiveLoggingEnabled()) {
-            logger.debug("[MEMORY_CONTEXT] requestId={} sanitizedHistory={}", requestId,
+            logger.info("[MEMORY_CONTEXT] requestId={} sanitizedHistory={}", requestId,
                     history.stream().map(Message::getText).toList());
         }
         try {
@@ -87,20 +87,20 @@ public class ChatCoordinator implements ChatOperations {
                     requestId, resolvedConversationId, response.status(), response.rows().size(),
                     elapsedMillis(structuredStartedAt));
             if (this.sensitiveLoggingPolicy.sensitiveLoggingEnabled()) {
-                logger.debug("[STRUCTURED_OUTPUT] requestId={} chatResponse={}", requestId, response);
+                logger.info("[STRUCTURED_OUTPUT] requestId={} chatResponse={}", requestId, response);
             }
             storeSanitizedTurn(resolvedConversationId, protectedMessage, response);
             logger.info("[MEMORY_WRITE] requestId={} conversationId={} sanitized=true messagesWritten=2",
                     requestId, resolvedConversationId);
             if (this.sensitiveLoggingPolicy.sensitiveLoggingEnabled()) {
-                logger.debug("[MEMORY_WRITE] requestId={} contentConsidered={} sanitizedUserMessage={} "
+                logger.info("[MEMORY_WRITE] requestId={} contentConsidered={} sanitizedUserMessage={} "
                         + "sanitizedAssistantMemory={}", requestId, response, protectedMessage,
                         memoryContent(response));
             }
             logger.info("[CHAT_RESPONSE] requestId={} conversationId={} completed status={} durationMs={}",
                     requestId, resolvedConversationId, response.status(), elapsedMillis(requestStartedAt));
             if (this.sensitiveLoggingPolicy.sensitiveLoggingEnabled()) {
-                logger.debug("[CHAT_RESPONSE] requestId={} finalResponse={}", requestId, response);
+                logger.info("[CHAT_RESPONSE] requestId={} finalResponse={}", requestId, response);
             }
             return response;
         }
