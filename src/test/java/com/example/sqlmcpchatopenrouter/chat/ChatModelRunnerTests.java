@@ -15,11 +15,9 @@ import org.springframework.ai.chat.model.Generation;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.openai.OpenAiChatOptions;
 import org.springframework.ai.tool.ToolCallback;
-import org.springframework.mock.env.MockEnvironment;
 import org.springframework.web.server.ResponseStatusException;
 
 import com.example.sqlmcpchatopenrouter.config.AppProperties;
-import com.example.sqlmcpchatopenrouter.config.SensitiveLoggingPolicy;
 import com.example.sqlmcpchatopenrouter.security.SensitiveDataGuard;
 import com.openai.core.http.Headers;
 import com.openai.errors.OpenAIInvalidDataException;
@@ -169,10 +167,12 @@ class ChatModelRunnerTests {
                         responseFormat),
                 new AppProperties.Memory(20), new AppProperties.Openrouter("", "test"),
                 new AppProperties.Security("unit-test-secret"), new AppProperties.Logging(false), List.of());
-        SensitiveLoggingPolicy loggingPolicy = new SensitiveLoggingPolicy(properties, new MockEnvironment());
+        com.example.sqlmcpchatopenrouter.config.SensitiveLoggingPolicy loggingPolicy =
+                new com.example.sqlmcpchatopenrouter.config.SensitiveLoggingPolicy(properties,
+                        new org.springframework.mock.env.MockEnvironment());
         SensitiveDataGuard guard = new SensitiveDataGuard(properties, JsonMapper.builder().build(), loggingPolicy);
         ChatModel model = responder::apply;
-        ChatModelRunner runner = new ChatModelRunner(ChatClient.builder(model), properties, loggingPolicy);
+        ChatModelRunner runner = new ChatModelRunner(ChatClient.builder(model), properties);
         return new Fixture(runner, guard.newSession());
     }
 

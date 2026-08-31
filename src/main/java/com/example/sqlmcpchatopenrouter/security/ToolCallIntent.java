@@ -81,7 +81,7 @@ final class ToolCallIntent {
         }
     }
 
-    private static String entityName(ObjectMapper objectMapper, String toolInput) {
+    static String entityName(ObjectMapper objectMapper, String toolInput) {
         try {
             JsonNode args = objectMapper.readTree(toolInput);
             JsonNode node = args.get("entity") != null ? args.get("entity") : args.get("entityName");

@@ -33,12 +33,12 @@ public class SensitiveLoggingPolicy {
     @PostConstruct
     void warnIfSensitiveLoggingWasRejected() {
         if (requestedSensitiveLogging() && !isLocalOrDevProfile()) {
-            logger.warn("[CHAT_REQUEST] app.logging.log-sensitive-data=true was ignored because activeProfiles={} "
-                    + "does not include local/dev", this.activeProfiles);
+            logger.warn("[STEP 3 - PII PROTECTION] app.logging.log-sensitive-data=true was ignored because "
+                    + "activeProfiles={} does not include local/dev", this.activeProfiles);
         }
         else if (sensitiveLoggingEnabled()) {
-            logger.warn("[CHAT_REQUEST] LOCAL SENSITIVE DEBUG LOGGING ENABLED. Raw business PII may appear in logs; "
-                    + "secrets, credentials, and authorization data remain excluded.");
+            logger.warn("[STEP 3 - PII PROTECTION] LOCAL SENSITIVE DEBUG LOGGING ENABLED. Raw business PII may "
+                    + "appear in stage logs; secrets, credentials, and authorization data remain excluded.");
         }
     }
 

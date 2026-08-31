@@ -1,6 +1,7 @@
 package com.example.sqlmcpchatopenrouter.security;
 
 import java.nio.charset.StandardCharsets;
+import java.util.LinkedHashMap;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -138,24 +139,39 @@ public class SensitiveDataGuard {
         /** Removes recognizable PII before the user message reaches memory or the model. */
         public String protectInput(String text) {
             long detectionStartedAt = System.nanoTime();
+            Map<String, String> existingTokens = this.tokens.snapshot();
             int before = tokenCount();
             String protectedText = replaceMatches(text, EMAIL, "Email", prefix("email", "EM"));
             protectedText = replacePhoneMatches(protectedText, "Phone", prefix("phone", "PH"));
             protectedText = replaceGroup(protectedText, FULL_NAME_FILTER, 2, "FullName", prefix("fullname", "CU"));
             protectedText = replaceGroup(protectedText, EXPLICIT_NAME, 1, "FullName", prefix("fullname", "CU"));
             int detected = tokenCount() - before;
-            logger.info("[PII_DETECTION] requestId={} entities={} tokenTypes={} durationMs={}",
-                    this.requestId, detected, this.tokens.prefixes(), elapsedMillis(detectionStartedAt));
-            if (sensitiveLoggingPolicy.sensitiveLoggingEnabled()) {
-                logger.info("[PII_DETECTION] requestId={} detectedEntities={}", this.requestId,
-                        this.tokens.snapshot());
-            }
-            logger.info("[PII_PROTECTION] requestId={} protected=true tokens={} durationMs={}",
-                    this.requestId, tokenCount(), elapsedMillis(detectionStartedAt));
-            logger.info("[PII_PROTECTION] requestId={} protectedMessage={}", this.requestId, protectedText);
-            if (sensitiveLoggingPolicy.sensitiveLoggingEnabled()) {
-                logger.info("[PII_PROTECTION] requestId={} tokenMapping={} protectedMessage={}",
-                        this.requestId, this.tokens.snapshot(), protectedText);
+            logger.info("[STEP 3 - PII PROTECTION] requestId={} protected={} entities={} tokenTypes={} "
+                    + "durationMs={}", this.requestId, detected > 0, detected, this.tokens.prefixes(),
+                    elapsedMillis(detectionStartedAt));
+            if (logger.isDebugEnabled()) {
+                logger.debug("""
+                        ------------------------------------------------------------
+                        [STEP 3 - PII PROTECTION] requestId={}
+
+                        INPUT
+                        {}
+
+                        DETECTED
+                        {}
+
+                        TOKEN MAP
+                        {}
+
+                        OUTPUT
+                        {}
+                        ------------------------------------------------------------""", this.requestId,
+                        sensitiveLoggingPolicy.sensitiveLoggingEnabled() ? text : "<raw input hidden>",
+                        sensitiveLoggingPolicy.sensitiveLoggingEnabled() ? detectedEntityValues(existingTokens)
+                                : "entities=" + detected + " tokenTypes=" + this.tokens.prefixes(),
+                        sensitiveLoggingPolicy.sensitiveLoggingEnabled() ? inputTokenMap(existingTokens)
+                                : "raw values hidden; protected tokens=" + newlyCreatedTokens(existingTokens),
+                        protectedText);
             }
             return protectedText;
         }
@@ -188,31 +204,41 @@ public class SensitiveDataGuard {
             if (!StringUtils.hasText(payload)) {
                 return payload;
             }
-            if (sensitiveLoggingPolicy.sensitiveLoggingEnabled()) {
-                logger.info("[DAB_RESULT_RAW] requestId={} rawResult={}", this.requestId, payload);
-            }
             try {
                 long startedAt = System.nanoTime();
+                Map<String, String> existingTokens = this.tokens.snapshot();
                 int before = tokenCount();
                 JsonNode root = objectMapper.readTree(payload);
                 walk(root);
                 String protectedPayload = objectMapper.writeValueAsString(root);
-                logger.info("[TOOL_RESULT_PROTECTION] requestId={} protectedEntities={} resultBytes={} "
-                        + "durationMs={}", this.requestId, tokenCount() - before,
-                        protectedPayload.length(), elapsedMillis(startedAt));
-                logger.info("[TOOL_RESULT_PROTECTION] requestId={} protectedToolResult={}", this.requestId,
-                        protectedPayload);
-                if (sensitiveLoggingPolicy.sensitiveLoggingEnabled()) {
-                    logger.info("[TOOL_RESULT_PROTECTION] requestId={} before={} after={}",
-                            this.requestId, payload, protectedPayload);
-                    logger.info("[MODEL_TOOL_RESULT] requestId={} protectedToolResult={}",
-                            this.requestId, protectedPayload);
+                int protectedEntities = tokenCount() - before;
+                logger.info("[STEP 7 - RESULT PROTECTION] requestId={} protected={} sensitiveValues={} "
+                        + "tokenTypes={} durationMs={}", this.requestId, protectedEntities > 0,
+                        protectedEntities, this.tokens.prefixes(), elapsedMillis(startedAt));
+                if (logger.isDebugEnabled()) {
+                    logger.debug("""
+                            ------------------------------------------------------------
+                            [STEP 7 - RESULT PROTECTION] requestId={}
+
+                            INPUT
+                            {}
+
+                            DETECTED
+                            {}
+
+                            OUTPUT TO MODEL
+                            {}
+                            ------------------------------------------------------------""", this.requestId,
+                            sensitiveLoggingPolicy.sensitiveLoggingEnabled() ? payload : "<raw database result hidden>",
+                            sensitiveLoggingPolicy.sensitiveLoggingEnabled() ? detectedEntityValues(existingTokens)
+                                    : "sensitiveValues=" + protectedEntities + " tokenTypes=" + this.tokens.prefixes(),
+                            protectedPayload);
                 }
                 return protectedPayload;
             }
             catch (RuntimeException ex) {
                 // Not JSON, or unparseable. Fail closed: never hand back something we could not inspect.
-                logger.warn("[TOOL_RESULT_PROTECTION] requestId={} parseable=false action=withheld errorType={}",
+                logger.warn("[STEP 7 - RESULT PROTECTION] requestId={} parseable=false action=withheld errorType={}",
                         this.requestId, ex.getClass().getSimpleName());
                 return "{\"error\":\"Tool result could not be inspected for sensitive data and was withheld.\"}";
             }
@@ -329,6 +355,32 @@ public class SensitiveDataGuard {
             return prefixByField.getOrDefault(field, fallback);
         }
 
+        private Map<String, String> newTokenSnapshot(Map<String, String> existingTokens) {
+            return this.tokens.snapshot().entrySet().stream()
+                    .filter(entry -> !existingTokens.containsKey(entry.getKey()))
+                    .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue,
+                            (first, second) -> first, LinkedHashMap::new));
+        }
+
+        private String detectedEntityValues(Map<String, String> existingTokens) {
+            Map<String, String> values = newTokenSnapshot(existingTokens);
+            return values.isEmpty() ? "none" : values.entrySet().stream()
+                    .map(entry -> entry.getKey().substring(0, entry.getKey().indexOf('_'))
+                            + " = " + entry.getValue())
+                    .collect(Collectors.joining("\n"));
+        }
+
+        private String inputTokenMap(Map<String, String> existingTokens) {
+            Map<String, String> values = newTokenSnapshot(existingTokens);
+            return values.isEmpty() ? "none" : values.entrySet().stream()
+                    .map(entry -> entry.getValue() + " -> " + entry.getKey())
+                    .collect(Collectors.joining("\n"));
+        }
+
+        private List<String> newlyCreatedTokens(Map<String, String> existingTokens) {
+            return new ArrayList<>(newTokenSnapshot(existingTokens).keySet());
+        }
+
     }
 
     /**
@@ -371,46 +423,103 @@ public class SensitiveDataGuard {
             String name = getToolDefinition().name();
             this.session.toolInvocations.incrementAndGet();
             this.session.onStep.accept(ToolCallIntent.describeStep(objectMapper, name, toolInput));
-            SensitiveDataGuard.logger.info("[TOOL_REQUEST] requestId={} tool={} intent={}",
-                    this.session.requestId, name, ToolCallIntent.render(objectMapper, toolInput));
-            SensitiveDataGuard.logger.info("[TOOL_REQUEST] requestId={} tool={} protectedArguments={}",
-                    this.session.requestId, name, toolInput);
             String detokenizedToolInput = this.session.tokens.detokenize(toolInput);
-            SensitiveDataGuard.logger.info("[TOOL_SECURE_BOUNDARY] requestId={} tool={} resolvedTokens={}",
-                    this.session.requestId, name, ToolCallIntent.resolvedTokenCount(toolInput, detokenizedToolInput));
-            SensitiveDataGuard.logger.info("[TOOL_SECURE_BOUNDARY] requestId={} tool={} resolvedTokens={} fields={}",
-                    this.session.requestId, name,
-                    ToolCallIntent.resolvedTokenCount(toolInput, detokenizedToolInput),
-                    ToolCallIntent.keys(objectMapper, toolInput));
-            if (sensitiveLoggingPolicy.sensitiveLoggingEnabled()) {
-                SensitiveDataGuard.logger.info("[TOOL_SECURE_BOUNDARY] requestId={} tool={} before={} after={}",
-                        this.session.requestId, name, toolInput, detokenizedToolInput);
-                SensitiveDataGuard.logger.info("[DAB_CALL] requestId={} tool={} arguments={}",
-                        this.session.requestId, name, detokenizedToolInput);
+            int resolvedTokens = ToolCallIntent.resolvedTokenCount(toolInput, detokenizedToolInput);
+            SensitiveDataGuard.logger.info("[STEP 5 - MCP TOOL] requestId={} tool={} approved=true "
+                    + "resolvedTokens={}", this.session.requestId, name, resolvedTokens);
+            if (SensitiveDataGuard.logger.isDebugEnabled()) {
+                SensitiveDataGuard.logger.debug("""
+                        ------------------------------------------------------------
+                        [STEP 5 - MCP TOOL] requestId={}
+
+                        INPUT FROM MODEL
+                        Tool:
+                        {}
+
+                        Arguments:
+                        {}
+
+                        TOKEN RESOLUTION
+                        {}
+
+                        OUTPUT TO DAB
+                        {}
+                        ------------------------------------------------------------""", this.session.requestId, name, toolInput,
+                        sensitiveLoggingPolicy.sensitiveLoggingEnabled()
+                                ? tokenResolutionMap(toolInput) : "resolvedTokens=" + resolvedTokens,
+                        sensitiveLoggingPolicy.sensitiveLoggingEnabled()
+                                ? detokenizedToolInput : protectedDabBoundaryView(toolInput));
             }
             long startedAt = System.nanoTime();
             String raw;
             try {
-                if (sensitiveLoggingPolicy.sensitiveLoggingEnabled()) {
-                    SensitiveDataGuard.logger.info("[DAB_CALL] requestId={} tool={} sendingArguments={}",
-                            this.session.requestId, name, detokenizedToolInput);
+                if (SensitiveDataGuard.logger.isDebugEnabled()) {
+                    SensitiveDataGuard.logger.debug("""
+                            ------------------------------------------------------------
+                            [STEP 6 - DAB / SQL] requestId={}
+
+                            INPUT TO DAB
+
+                            Tool:
+                            {}
+
+                            Entity:
+                            {}
+
+                            Arguments:
+                            {}
+
+                            SQL Executed:
+                            Actual SQL is generated/executed inside Microsoft DAB and is not available at the Spring application logging boundary.
+                            ------------------------------------------------------------""", this.session.requestId, name,
+                            ToolCallIntent.entityName(objectMapper, detokenizedToolInput),
+                            sensitiveLoggingPolicy.sensitiveLoggingEnabled()
+                                    ? detokenizedToolInput : protectedDabBoundaryView(toolInput));
                 }
                 raw = invocation.call(detokenizedToolInput);
             }
             catch (RuntimeException ex) {
-                SensitiveDataGuard.logger.error("[DAB_CALL] requestId={} tool={} failed errorType={}",
+                SensitiveDataGuard.logger.error("[STEP 6 - DAB / SQL] requestId={} tool={} failed errorType={}",
                         this.session.requestId, name, ex.getClass().getSimpleName());
                 throw ex;
             }
             long latencyMs = (System.nanoTime() - startedAt) / 1_000_000L;
-            SensitiveDataGuard.logger.info("[DAB_CALL] requestId={} tool={} durationMs={} resultBytes={}",
-                    this.session.requestId, name, latencyMs, raw == null ? 0 : raw.length());
+            int rows = resultRowCount(raw);
+            SensitiveDataGuard.logger.info("[STEP 6 - DAB / SQL] requestId={} tool={} entity={} rows={} "
+                    + "durationMs={}", this.session.requestId, name,
+                    ToolCallIntent.entityName(objectMapper, detokenizedToolInput), rowsDescription(rows), latencyMs);
+            if (SensitiveDataGuard.logger.isDebugEnabled()) {
+                SensitiveDataGuard.logger.debug("""
+                        ------------------------------------------------------------
+                        [STEP 6 - DAB / SQL] requestId={}
+
+                        OUTPUT FROM DAB / DATABASE
+
+                        rows={}
+                        durationMs={}
+
+                        {}
+                        ------------------------------------------------------------""", this.session.requestId, rowsDescription(rows),
+                        latencyMs, sensitiveLoggingPolicy.sensitiveLoggingEnabled()
+                                ? raw : "<raw database result hidden until Step 7 protected output>");
+            }
             int before = this.session.tokenCount();
             String safe = this.session.tokenizeJson(raw);
-            SensitiveDataGuard.logger.info("[TOOL_RESULT_PROTECTION] requestId={} tool={} protectedResultBytes={} "
-                    + "newTokens={}", this.session.requestId, name, safe == null ? 0 : safe.length(),
-                    this.session.tokenCount() - before);
             return safe;
+        }
+
+        private String tokenResolutionMap(String toolInput) {
+            Map<String, String> matches = this.session.tokens.snapshot().entrySet().stream()
+                    .filter(entry -> toolInput != null && toolInput.contains(entry.getKey()))
+                    .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue,
+                            (first, second) -> first, LinkedHashMap::new));
+            return matches.isEmpty() ? "none" : matches.entrySet().stream()
+                    .map(entry -> entry.getKey() + " -> " + entry.getValue())
+                    .collect(Collectors.joining("\n"));
+        }
+
+        private String protectedDabBoundaryView(String protectedToolInput) {
+            return protectedToolInput == null ? "" : protectedToolInput;
         }
     }
 
@@ -422,5 +531,57 @@ public class SensitiveDataGuard {
 
     private static long elapsedMillis(long startedAtNanos) {
         return (System.nanoTime() - startedAtNanos) / 1_000_000L;
+    }
+
+    private int resultRowCount(String payload) {
+        if (!StringUtils.hasText(payload)) {
+            return -1;
+        }
+        try {
+            JsonNode root = this.objectMapper.readTree(payload);
+            int direct = countValueArray(root);
+            if (direct >= 0) {
+                return direct;
+            }
+            JsonNode content = root.get("content");
+            if (content instanceof ArrayNode array && !array.isEmpty()) {
+                for (JsonNode item : array) {
+                    JsonNode text = item.get("text");
+                    if (text != null && text.isString()) {
+                        JsonNode nested = this.objectMapper.readTree(text.stringValue());
+                        int nestedCount = countValueArray(nested);
+                        if (nestedCount >= 0) {
+                            return nestedCount;
+                        }
+                    }
+                }
+            }
+        }
+        catch (RuntimeException ex) {
+            return -1;
+        }
+        return -1;
+    }
+
+    private static int countValueArray(JsonNode node) {
+        if (node == null) {
+            return -1;
+        }
+        JsonNode value = node.get("value");
+        if (value instanceof ArrayNode array) {
+            return array.size();
+        }
+        JsonNode result = node.get("result");
+        if (result != null) {
+            JsonNode resultValue = result.get("value");
+            if (resultValue instanceof ArrayNode array) {
+                return array.size();
+            }
+        }
+        return -1;
+    }
+
+    private static String rowsDescription(int rows) {
+        return rows >= 0 ? Integer.toString(rows) : "unknown";
     }
 }

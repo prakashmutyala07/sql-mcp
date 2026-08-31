@@ -1,5 +1,6 @@
 package com.example.sqlmcpchatopenrouter.chat;
 
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -19,7 +20,6 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.server.ResponseStatusException;
 
 import com.example.sqlmcpchatopenrouter.config.AppProperties;
-import com.example.sqlmcpchatopenrouter.config.SensitiveLoggingPolicy;
 import com.example.sqlmcpchatopenrouter.security.SensitiveDataGuard;
 import com.openai.errors.OpenAIInvalidDataException;
 import com.openai.errors.RateLimitException;
@@ -45,16 +45,12 @@ public class ChatModelRunner {
 
     private final AppProperties properties;
 
-    private final SensitiveLoggingPolicy sensitiveLoggingPolicy;
-
     private final BeanOutputConverter<ChatResponse.ModelAnswer> answerConverter =
             new BeanOutputConverter<>(ChatResponse.ModelAnswer.class);
 
-    public ChatModelRunner(ChatClient.Builder chatClientBuilder, AppProperties properties,
-            SensitiveLoggingPolicy sensitiveLoggingPolicy) {
+    public ChatModelRunner(ChatClient.Builder chatClientBuilder, AppProperties properties) {
         this.chatClient = chatClientBuilder.build();
         this.properties = properties;
-        this.sensitiveLoggingPolicy = sensitiveLoggingPolicy;
     }
 
     public Result run(String message, String systemPrompt, List<Message> history, ToolCallback[] tools,
@@ -105,12 +101,26 @@ public class ChatModelRunner {
             SensitiveDataGuard.Session guardSession, String model, boolean fallbackUsed, String requestId) {
         long startedAt = System.nanoTime();
         org.springframework.ai.chat.model.ChatResponse response;
-        logger.info("[MODEL_REQUEST] requestId={} model={} historyMessages={} tools={} responseFormat={} "
-                + "protectedUserMessage={} toolNames={}", requestId, model, history.size(), tools.length,
-                this.properties.execution().responseFormat(), message, toolNames(tools));
-        if (this.sensitiveLoggingPolicy.sensitiveLoggingEnabled()) {
-            logger.info("[MODEL_REQUEST] requestId={} systemPrompt={} protectedConversationContext={}",
-                    requestId, systemPrompt, history.stream().map(Message::getText).toList());
+        if (logger.isDebugEnabled()) {
+            logger.debug("""
+                    ------------------------------------------------------------
+                    [STEP 4 - AI MODEL] requestId={}
+
+                    INPUT TO MODEL
+
+                    SYSTEM INSTRUCTIONS
+                    {}
+
+                    SANITIZED CONVERSATION CONTEXT
+                    {}
+
+                    USER MESSAGE
+                    {}
+
+                    AVAILABLE TOOLS
+                    {}
+                    ------------------------------------------------------------""", requestId, systemPrompt(systemPrompt),
+                    history.stream().map(Message::getText).toList(), message, toolNames(tools));
         }
         try {
             response = this.chatClient.prompt()
@@ -125,11 +135,19 @@ public class ChatModelRunner {
             throw new ModelCallException(model, ex, elapsedMillis(startedAt));
         }
 
-        logUsage(model, response, System.nanoTime() - startedAt, requestId);
+        long elapsedNanos = System.nanoTime() - startedAt;
+        logUsage(model, response, elapsedNanos, requestId, tools);
         String content = response == null || response.getResult() == null
                 || response.getResult().getOutput() == null ? null : response.getResult().getOutput().getText();
-        if (this.sensitiveLoggingPolicy.sensitiveLoggingEnabled()) {
-            logger.info("[MODEL_RESPONSE] requestId={} modelContent={}", requestId, content);
+        String protectedContent = guardSession.protectOutput(content);
+        if (logger.isDebugEnabled()) {
+            logger.debug("""
+                    ------------------------------------------------------------
+                    [STEP 4 - AI MODEL] requestId={}
+
+                    OUTPUT FROM MODEL
+                    {}
+                    ------------------------------------------------------------""", requestId, protectedContent);
         }
         long structuredStartedAt = System.nanoTime();
         ChatResponse.ModelAnswer parsed;
@@ -139,16 +157,12 @@ public class ChatModelRunner {
         }
         catch (RuntimeException ex) {
             parsedSuccessfully = false;
-            logger.warn("[STRUCTURED_OUTPUT] requestId={} model={} parsed=false errorType={} durationMs={}",
+            logger.warn("[STEP 8 - RESPONSE / MEMORY] requestId={} model={} parsed=false errorType={} durationMs={}",
                     requestId, model, ex.getClass().getSimpleName(), elapsedMillis(structuredStartedAt));
             parsed = new ChatResponse.ModelAnswer(ChatResponse.Status.ERROR, STRUCTURED_OUTPUT_ERROR,
                     List.of(), List.of(), false, "", "");
         }
-        if (parsedSuccessfully) {
-            logger.info("[STRUCTURED_OUTPUT] requestId={} model={} parsed=true durationMs={}",
-                    requestId, model, elapsedMillis(structuredStartedAt));
-        }
-        return new Result(model, fallbackUsed, sanitize(parsed, guardSession));
+        return new Result(model, fallbackUsed, sanitize(parsed, guardSession), protectedContent);
     }
 
     private static ChatResponse.ModelAnswer sanitize(ChatResponse.ModelAnswer answer,
@@ -205,16 +219,16 @@ public class ChatModelRunner {
     }
 
     private static void logUsage(String model, org.springframework.ai.chat.model.ChatResponse response,
-            long elapsedNanos, String requestId) {
+            long elapsedNanos, String requestId, ToolCallback[] tools) {
         long latencyMs = elapsedNanos / 1_000_000L;
         Usage usage = response != null && response.getMetadata() != null ? response.getMetadata().getUsage() : null;
         if (usage == null) {
-            logger.info("[MODEL_RESPONSE] requestId={} model={} durationMs={} tokens=unavailable",
-                    requestId, model, latencyMs);
+            logger.info("[STEP 4 - AI MODEL] requestId={} model={} tools={} durationMs={} tokens=unavailable",
+                    requestId, model, tools.length, latencyMs);
             return;
         }
-        logger.info("[MODEL_RESPONSE] requestId={} model={} durationMs={} promptTokens={} completionTokens={} "
-                + "totalTokens={}", requestId, model, latencyMs, usage.getPromptTokens(),
+        logger.info("[STEP 4 - AI MODEL] requestId={} model={} tools={} durationMs={} promptTokens={} "
+                + "completionTokens={} totalTokens={}", requestId, model, tools.length, latencyMs, usage.getPromptTokens(),
                 usage.getCompletionTokens(), usage.getTotalTokens());
     }
 
@@ -223,13 +237,13 @@ public class ChatModelRunner {
     }
 
     private static void logModelFailure(ModelCallException failure, String requestId) {
-        logger.warn("[MODEL_RESPONSE] requestId={} provider request failed model={} errorType={} durationMs={}",
+        logger.warn("[STEP 4 - AI MODEL] requestId={} provider request failed model={} errorType={} durationMs={}",
                 requestId, failure.model(),
                 failure.getCause().getClass().getSimpleName(), failure.elapsedMs());
     }
 
     private static List<String> toolNames(ToolCallback[] tools) {
-        return java.util.Arrays.stream(tools).map(tool -> tool.getToolDefinition().name()).toList();
+        return Arrays.stream(tools).map(tool -> tool.getToolDefinition().name()).toList();
     }
 
     private static void sleepBeforeRetry() {
@@ -259,7 +273,8 @@ public class ChatModelRunner {
         return defaultMessage;
     }
 
-    public record Result(String model, boolean fallbackUsed, ChatResponse.ModelAnswer answer) {
+    public record Result(String model, boolean fallbackUsed, ChatResponse.ModelAnswer answer,
+            String protectedModelOutput) {
     }
 
     private static final class ModelCallException extends RuntimeException {

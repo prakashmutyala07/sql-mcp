@@ -114,9 +114,8 @@ class ChatCoordinatorTests {
         ChatMemory memory = MessageWindowChatMemory.builder().maxMessages(20).build();
         PromptProvider prompts = new PromptProvider(new ByteArrayResource(
                 "Date __CURRENT_DATE__, zone __TIME_ZONE__.".getBytes(StandardCharsets.UTF_8)));
-        ChatModelRunner runner = new ChatModelRunner(ChatClient.builder(model), properties, loggingPolicy);
-        ChatCoordinator coordinator = new ChatCoordinator(new EmptyToolCatalog(), memory, guard, prompts, runner,
-                loggingPolicy);
+        ChatModelRunner runner = new ChatModelRunner(ChatClient.builder(model), properties);
+        ChatCoordinator coordinator = new ChatCoordinator(new EmptyToolCatalog(), memory, guard, prompts, runner);
         return new Fixture(coordinator, memory);
     }
 

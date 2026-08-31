@@ -13,7 +13,6 @@ import org.springframework.ai.tool.ToolCallback;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
-import com.example.sqlmcpchatopenrouter.config.SensitiveLoggingPolicy;
 import com.example.sqlmcpchatopenrouter.mcp.McpToolCatalog;
 import com.example.sqlmcpchatopenrouter.security.SensitiveDataGuard;
 
@@ -33,17 +32,13 @@ public class ChatCoordinator implements ChatOperations {
 
     private final ChatModelRunner modelRunner;
 
-    private final SensitiveLoggingPolicy sensitiveLoggingPolicy;
-
     public ChatCoordinator(McpToolCatalog mcpToolCatalog, ChatMemory chatMemory,
-            SensitiveDataGuard sensitiveDataGuard, PromptProvider promptProvider, ChatModelRunner modelRunner,
-            SensitiveLoggingPolicy sensitiveLoggingPolicy) {
+            SensitiveDataGuard sensitiveDataGuard, PromptProvider promptProvider, ChatModelRunner modelRunner) {
         this.mcpToolCatalog = mcpToolCatalog;
         this.chatMemory = chatMemory;
         this.sensitiveDataGuard = sensitiveDataGuard;
         this.promptProvider = promptProvider;
         this.modelRunner = modelRunner;
-        this.sensitiveLoggingPolicy = sensitiveLoggingPolicy;
     }
 
     @Override
@@ -57,11 +52,6 @@ public class ChatCoordinator implements ChatOperations {
                 : UUID.randomUUID().toString();
         String requestId = UUID.randomUUID().toString().substring(0, 8);
         long requestStartedAt = System.nanoTime();
-        logger.info("[CHAT_REQUEST] requestId={} conversationId={} request started inputChars={}",
-                requestId, resolvedConversationId, message == null ? 0 : message.length());
-        if (this.sensitiveLoggingPolicy.sensitiveLoggingEnabled()) {
-            logger.info("[CHAT_REQUEST] requestId={} rawUserInput={}", requestId, message);
-        }
 
         progressSink.progress("prepare", "Preparing a safe database request\u2026");
         SensitiveDataGuard.Session guardSession =
@@ -71,42 +61,46 @@ public class ChatCoordinator implements ChatOperations {
         progressSink.progress("mcp", "Connected to DAB (" + tools.length + " tools).");
 
         List<Message> history = this.chatMemory.get(resolvedConversationId);
-        logger.info("[MEMORY_CONTEXT] requestId={} conversationId={} sanitized=true messages={}",
-                requestId, resolvedConversationId, history.size());
-        if (this.sensitiveLoggingPolicy.sensitiveLoggingEnabled()) {
-            logger.info("[MEMORY_CONTEXT] requestId={} sanitizedHistory={}", requestId,
-                    history.stream().map(Message::getText).toList());
-        }
         try {
             ChatModelRunner.Result result = this.modelRunner.run(protectedMessage, this.promptProvider.systemPrompt(),
                     history, tools, guardSession, progressSink, requestId);
             long structuredStartedAt = System.nanoTime();
             ChatResponse response = ChatResponse.from(resolvedConversationId, result.model(), result.fallbackUsed(),
                     result.answer(), guardSession.toolInvocations() > 0);
-            logger.info("[STRUCTURED_OUTPUT] requestId={} conversationId={} status={} rows={} durationMs={}",
-                    requestId, resolvedConversationId, response.status(), response.rows().size(),
-                    elapsedMillis(structuredStartedAt));
-            if (this.sensitiveLoggingPolicy.sensitiveLoggingEnabled()) {
-                logger.info("[STRUCTURED_OUTPUT] requestId={} chatResponse={}", requestId, response);
-            }
             storeSanitizedTurn(resolvedConversationId, protectedMessage, response);
-            logger.info("[MEMORY_WRITE] requestId={} conversationId={} sanitized=true messagesWritten=2",
-                    requestId, resolvedConversationId);
-            if (this.sensitiveLoggingPolicy.sensitiveLoggingEnabled()) {
-                logger.info("[MEMORY_WRITE] requestId={} contentConsidered={} sanitizedUserMessage={} "
-                        + "sanitizedAssistantMemory={}", requestId, response, protectedMessage,
-                        memoryContent(response));
+            logger.info("[STEP 8 - RESPONSE / MEMORY] requestId={} conversationId={} status={} rows={} "
+                    + "memorySanitized=true durationMs={}", requestId, resolvedConversationId,
+                    response.status(), response.rows().size(), elapsedMillis(structuredStartedAt));
+            if (logger.isDebugEnabled()) {
+                logger.debug("""
+                        ------------------------------------------------------------
+                        [STEP 8 - RESPONSE / MEMORY] requestId={}
+
+                        STRUCTURED RESPONSE
+
+                        INPUT FROM MODEL
+                        {}
+
+                        OUTPUT ChatResponse
+                        {}
+
+                        MEMORY OUTPUT
+
+                        USER:
+                        {}
+
+                        ASSISTANT:
+                        {}
+                        ------------------------------------------------------------""", requestId,
+                        result.protectedModelOutput(), response, protectedMessage, memoryContent(response));
             }
             ChatResponse uiResponse = revealForTrustedLocalDisplay(response, guardSession);
-            logger.info("[CHAT_RESPONSE] requestId={} conversationId={} completed status={} durationMs={}",
-                    requestId, resolvedConversationId, uiResponse.status(), elapsedMillis(requestStartedAt));
-            if (this.sensitiveLoggingPolicy.sensitiveLoggingEnabled()) {
-                logger.info("[CHAT_RESPONSE] requestId={} finalResponse={}", requestId, uiResponse);
-            }
+            logger.debug("[STEP 8 - RESPONSE / MEMORY] requestId={} totalChatDurationMs={}", requestId,
+                    elapsedMillis(requestStartedAt));
             return uiResponse;
         }
         catch (RuntimeException ex) {
-            logger.error("[CHAT_RESPONSE] requestId={} conversationId={} failed errorType={} durationMs={}",
+            logger.error("[STEP 8 - RESPONSE / MEMORY] requestId={} conversationId={} failed errorType={} durationMs={}",
                     requestId, resolvedConversationId, ex.getClass().getSimpleName(),
                     elapsedMillis(requestStartedAt));
             throw ex;
