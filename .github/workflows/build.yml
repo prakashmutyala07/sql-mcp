@@ -11,13 +11,6 @@ jobs:
     name: Maven Tests
     runs-on: ubuntu-latest
 
-    env:
-      OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
-      TOKEN_SECRET_KEY: ${{ secrets.TOKEN_SECRET_KEY }}
-      DAB_MCP_BASE_URL: ${{ secrets.DAB_MCP_BASE_URL }}
-      OPENROUTER_HTTP_REFERER: ${{ secrets.OPENROUTER_HTTP_REFERER }}
-      ECOM_MSSQL_CONNECTION_STRING: ${{ secrets.ECOM_MSSQL_CONNECTION_STRING }}
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4

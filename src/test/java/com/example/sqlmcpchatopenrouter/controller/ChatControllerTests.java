@@ -35,6 +35,16 @@ class ChatControllerTests {
     }
 
     @Test
+    void chatRejectsUnsafeConversationId() {
+        ChatController.ChatRequest request = new ChatController.ChatRequest("List entities", "../../other-user");
+
+        assertThatThrownBy(() -> this.controller.chat(request))
+                .isInstanceOf(ResponseStatusException.class)
+                .extracting("statusCode")
+                .isEqualTo(HttpStatus.BAD_REQUEST);
+    }
+
+    @Test
     void chatMapsStructuredServiceResponse() {
         this.aiChatService.chatResponse = new ChatResponse("demo", "minimax/minimax-m3:free", false, Status.ANSWER,
                 "There are 4 entities.", List.of("Entity"), List.of(List.of("Customer"), List.of("Order")), true,

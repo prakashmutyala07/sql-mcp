@@ -1,6 +1,8 @@
 package com.example.sqlmcpchatopenrouter.chat;
 
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -44,6 +46,8 @@ public class ChatCoordinator implements ChatOperations {
 
     private final ChatMemory chatMemory;
 
+    private final MessageChatMemoryAdvisor memoryAdvisor;
+
     private final AppProperties properties;
 
     private final SensitiveDataGuard sensitiveDataGuard;
@@ -59,6 +63,7 @@ public class ChatCoordinator implements ChatOperations {
         this.chatClient = chatClientBuilder.build();
         this.mcpToolCatalog = mcpToolCatalog;
         this.chatMemory = chatMemory;
+        this.memoryAdvisor = MessageChatMemoryAdvisor.builder(chatMemory).build();
         this.properties = properties;
         this.sensitiveDataGuard = sensitiveDataGuard;
         this.systemPromptTemplate = read(systemPrompt);
@@ -74,7 +79,9 @@ public class ChatCoordinator implements ChatOperations {
                 : UUID.randomUUID().toString();
 
         progressSink.progress("schema", "Loading schema and relationships\u2026");
-        String system = this.systemPromptTemplate;
+        String system = this.systemPromptTemplate
+                .replace("__CURRENT_DATE__", LocalDate.now().toString())
+                .replace("__TIME_ZONE__", ZoneId.systemDefault().getId());
 
         SensitiveDataGuard.Session guardSession =
                 this.sensitiveDataGuard.newSession(step -> progressSink.progress("tool", step));
@@ -142,7 +149,7 @@ public class ChatCoordinator implements ChatOperations {
                 this.chatClient.prompt()
                 .system(system)
                 .user(message)
-                .advisors(MessageChatMemoryAdvisor.builder(this.chatMemory).build())
+                .advisors(this.memoryAdvisor)
                 .advisors(advisor -> advisor.param(ChatMemory.CONVERSATION_ID, conversationId))
                 .options(chatOptions(model, tools))
                 .call()

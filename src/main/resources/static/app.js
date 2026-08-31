@@ -189,7 +189,7 @@ function addAssistantTurn() {
 
       if (payload.message) {
         const p = document.createElement("div");
-        p.className = "answer";
+        p.className = payload.status === "ERROR" ? "answer error" : "answer";
         p.textContent = payload.message;
         wrap.append(p);
       }

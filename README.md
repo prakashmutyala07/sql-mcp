@@ -75,6 +75,22 @@ Clear in-memory chat history for a conversation:
 curl -X DELETE http://localhost:8080/api/conversations/demo/memory
 ```
 
+## Runtime Flow
+
+```text
+ChatController -> ChatCoordinator -> PII guard -> Spring AI ChatClient
+               -> conversation memory -> guarded DAB MCP tools -> SQL Server
+               -> typed ChatResponse -> PII output guard -> UI
+```
+
+Inbound email, phone, and explicitly identified customer-name values are pseudonymized before
+they reach conversation memory or OpenRouter. Sensitive DAB result fields are pseudonymized at
+the tool-callback boundary before the model sees them. Responses retain stable pseudonyms such
+as `CU_a3f9d2`; the application does not restore raw PII in the browser.
+
+The POC has no end-user authentication or per-user authorization. DAB mutation tools are
+disabled and database access should use the `ecom_dab_reader` login created by the setup script.
+
 ## Isolation
 
 This project is intentionally independent and does not reference the existing `sql-mcp-chat` project.

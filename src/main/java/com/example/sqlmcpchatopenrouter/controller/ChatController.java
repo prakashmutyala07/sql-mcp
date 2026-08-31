@@ -26,7 +26,11 @@ import com.example.sqlmcpchatopenrouter.mcp.McpToolCatalog;
 @RequestMapping("/api")
 public class ChatController {
 
-    private static final long SSE_TIMEOUT_MILLIS = 180_000L;
+    /** Covers the default primary call, retry, fallback, and a small delivery margin. */
+    private static final long SSE_TIMEOUT_MILLIS = 390_000L;
+
+    private static final java.util.regex.Pattern CONVERSATION_ID =
+            java.util.regex.Pattern.compile("[A-Za-z0-9_-]{1,128}");
 
     private final ChatOperations chatCoordinator;
 
@@ -44,18 +48,14 @@ public class ChatController {
 
     @PostMapping("/chat")
     public ResponseEntity<ChatResponse> chat(@RequestBody ChatRequest request) {
-        if (request == null || !StringUtils.hasText(request.message())) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "message is required");
-        }
+        validate(request);
 
         return ResponseEntity.ok(this.chatCoordinator.chat(request.message(), request.conversationId()));
     }
 
     @PostMapping(path = "/chat/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter streamChat(@RequestBody ChatRequest request) {
-        if (request == null || !StringUtils.hasText(request.message())) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "message is required");
-        }
+        validate(request);
 
         SseEmitter emitter = new SseEmitter(SSE_TIMEOUT_MILLIS);
         this.chatTaskExecutor.execute(() -> {
@@ -80,6 +80,7 @@ public class ChatController {
 
     @DeleteMapping("/conversations/{conversationId}/memory")
     public ResponseEntity<Void> clearMemory(@PathVariable String conversationId) {
+        validateConversationId(conversationId);
         this.chatCoordinator.clearMemory(conversationId);
         return ResponseEntity.noContent().build();
     }
@@ -104,5 +105,20 @@ public class ChatController {
             return statusException.getReason();
         }
         return "Chat request failed.";
+    }
+
+    private static void validate(ChatRequest request) {
+        if (request == null || !StringUtils.hasText(request.message())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "message is required");
+        }
+        if (StringUtils.hasText(request.conversationId())) {
+            validateConversationId(request.conversationId());
+        }
+    }
+
+    private static void validateConversationId(String conversationId) {
+        if (!StringUtils.hasText(conversationId) || !CONVERSATION_ID.matcher(conversationId).matches()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "invalid conversationId");
+        }
     }
 }
