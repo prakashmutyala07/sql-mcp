@@ -32,8 +32,10 @@ class ChatCoordinatorTests {
 
     private static final String PHONE = "415-555-0101";
 
+    private static final String NAME = "Jane Doe";
+
     @Test
-    void rawInputAndModelOutputNeverReachFinalResponseOrMemory() {
+    void rawInputAndModelOutputNeverReachFinalResponseOrMemoryInNormalMode() {
         AtomicReference<Prompt> receivedPrompt = new AtomicReference<>();
         ChatModel model = prompt -> {
             receivedPrompt.set(prompt);
@@ -43,7 +45,7 @@ class ChatCoordinatorTests {
                     "partialResults":false,"dataNotes":"Phone 415-555-0101","followUpQuestion":""}
                     """);
         };
-        Fixture fixture = fixture(model);
+        Fixture fixture = fixture(model, false);
 
         ChatResponse result = fixture.coordinator().chat(
                 "Find jane.doe@example.com or call 415-555-0101", "privacy-test");
@@ -58,8 +60,31 @@ class ChatCoordinatorTests {
     }
 
     @Test
+    void localSensitiveModeRevealsUiResponseButKeepsMemorySanitized() {
+        ChatModel model = prompt -> {
+            String nameToken = prompt.getContents().replaceAll("(?s).*?(CU_[0-9a-f]{6}).*", "$1");
+            String emailToken = prompt.getContents().replaceAll("(?s).*?(EM_[0-9a-f]{6}).*", "$1");
+            return response("""
+                    {"status":"ANSWER","answer":"Customer %s is a Gold-tier customer.",
+                    "columns":["CustomerId","CustomerNameToken","EmailToken"],"rows":[["42","%s","%s"]],
+                    "partialResults":false,"dataNotes":"Sensitive fields are tokenized.","followUpQuestion":""}
+                    """.formatted(nameToken, nameToken, emailToken));
+        };
+        Fixture fixture = fixture(model, true);
+
+        ChatResponse result = fixture.coordinator().chat(
+                "Find customer named Jane Doe with jane.doe@example.com", "local-display-test");
+
+        assertThat(result.message()).contains(NAME).doesNotContain("CU_d18af0");
+        assertThat(result.rows().getFirst()).contains(NAME, EMAIL);
+        assertThat(fixture.memory().get("local-display-test"))
+                .extracting(message -> message.getText())
+                .allSatisfy(text -> assertThat(text).doesNotContain(NAME, EMAIL));
+    }
+
+    @Test
     void malformedStructuredOutputReturnsAndStoresSafeError() {
-        Fixture fixture = fixture(prompt -> response("not-json jane.doe@example.com 415-555-0101"));
+        Fixture fixture = fixture(prompt -> response("not-json jane.doe@example.com 415-555-0101"), false);
 
         ChatResponse result = fixture.coordinator().chat("Show orders", "parse-test");
 
@@ -70,17 +95,22 @@ class ChatCoordinatorTests {
                 .allSatisfy(text -> assertThat(text).doesNotContain(EMAIL, PHONE));
     }
 
-    private static Fixture fixture(ChatModel model) {
+    private static Fixture fixture(ChatModel model, boolean localSensitiveMode) {
         AppProperties properties = new AppProperties(
                 new AppProperties.Models("primary", "fallback"),
                 new AppProperties.Execution(true, false, 1200, 0.1, Duration.ofSeconds(10),
                         AppProperties.ResponseFormat.JSON_SCHEMA),
                 new AppProperties.Memory(20), new AppProperties.Openrouter("", "test"),
                 new AppProperties.Security("unit-test-secret"),
-                new AppProperties.Logging(false),
+                new AppProperties.Logging(localSensitiveMode),
                 List.of(new AppProperties.SensitiveField("Customer", "Email", "EM"),
-                        new AppProperties.SensitiveField("Customer", "Phone", "PH")));
-        SensitiveLoggingPolicy loggingPolicy = new SensitiveLoggingPolicy(properties, new MockEnvironment());
+                        new AppProperties.SensitiveField("Customer", "Phone", "PH"),
+                        new AppProperties.SensitiveField("Customer", "FullName", "CU")));
+        MockEnvironment environment = new MockEnvironment();
+        if (localSensitiveMode) {
+            environment.setActiveProfiles("local");
+        }
+        SensitiveLoggingPolicy loggingPolicy = new SensitiveLoggingPolicy(properties, environment);
         SensitiveDataGuard guard = new SensitiveDataGuard(properties, JsonMapper.builder().build(), loggingPolicy);
         ChatMemory memory = MessageWindowChatMemory.builder().maxMessages(20).build();
         PromptProvider prompts = new PromptProvider(new ByteArrayResource(

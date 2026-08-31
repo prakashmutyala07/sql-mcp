@@ -97,12 +97,14 @@ public class ChatCoordinator implements ChatOperations {
                         + "sanitizedAssistantMemory={}", requestId, response, protectedMessage,
                         memoryContent(response));
             }
+            ChatResponse uiResponse = this.sensitiveLoggingPolicy.sensitiveLoggingEnabled()
+                    ? revealForTrustedLocalDisplay(response, guardSession) : response;
             logger.info("[CHAT_RESPONSE] requestId={} conversationId={} completed status={} durationMs={}",
-                    requestId, resolvedConversationId, response.status(), elapsedMillis(requestStartedAt));
+                    requestId, resolvedConversationId, uiResponse.status(), elapsedMillis(requestStartedAt));
             if (this.sensitiveLoggingPolicy.sensitiveLoggingEnabled()) {
-                logger.info("[CHAT_RESPONSE] requestId={} finalResponse={}", requestId, response);
+                logger.info("[CHAT_RESPONSE] requestId={} finalResponse={}", requestId, uiResponse);
             }
-            return response;
+            return uiResponse;
         }
         catch (RuntimeException ex) {
             logger.error("[CHAT_RESPONSE] requestId={} conversationId={} failed errorType={} durationMs={}",
@@ -136,6 +138,19 @@ public class ChatCoordinator implements ChatOperations {
         return "status=" + response.status() + "; answer=" + response.message()
                 + "; columns=" + response.columns() + "; rows=" + response.rows()
                 + "; dataNotes=" + response.dataNotes() + "; followUpQuestion=" + response.followUpQuestion();
+    }
+
+    private static ChatResponse revealForTrustedLocalDisplay(ChatResponse response,
+            SensitiveDataGuard.Session guardSession) {
+        return new ChatResponse(response.conversationId(), response.model(), response.fallbackUsed(),
+                response.status(), guardSession.revealForTrustedLocalDisplay(response.message()),
+                response.columns().stream().map(guardSession::revealForTrustedLocalDisplay).toList(),
+                response.rows().stream()
+                        .map(row -> row.stream().map(guardSession::revealForTrustedLocalDisplay).toList())
+                        .toList(),
+                response.usedDatabaseTools(), response.partialResults(),
+                guardSession.revealForTrustedLocalDisplay(response.dataNotes()),
+                guardSession.revealForTrustedLocalDisplay(response.followUpQuestion()));
     }
 
     private static long elapsedMillis(long startedAtNanos) {

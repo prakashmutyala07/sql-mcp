@@ -169,6 +169,11 @@ public class SensitiveDataGuard {
             return redactPhoneMatches(EMAIL.matcher(protectedText).replaceAll("[REDACTED_EMAIL]"));
         }
 
+        /** Restores request-local tokens only after model calls and sanitized memory writes are complete. */
+        public String revealForTrustedLocalDisplay(String text) {
+            return this.tokens.detokenize(text);
+        }
+
         public int tokenCount() {
             return this.tokens.size();
         }
